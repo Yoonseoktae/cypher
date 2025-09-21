@@ -9,5 +9,5 @@ $routes->get('/', 'Home::index');
 
 // API 라우트 그룹
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) {
-    $routes->get('hello', 'TestController::hello');
+    $routes->match(['get', 'post'], 'hello', 'TestController::hello');
 });
