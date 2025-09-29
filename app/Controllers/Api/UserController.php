@@ -76,7 +76,7 @@ class UserController extends BaseApiController
             $updateData['app_version'] = $appVersion;
         }
 
-        $result = $this->userModel->update($user['id'], $updateData);
+        $this->userModel->update($user['id'], $updateData);
 
         return $this->successResponse([
             'user_id' => $user['id'],

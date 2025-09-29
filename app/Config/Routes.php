@@ -16,7 +16,6 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->post('admin/login', 'AdminController::login');
     $routes->post('admin/logout', 'AdminController::logout');
     $routes->post('users/login', 'UserController::login');
-    $routes->post('users/logout', 'UserController::logout');
     
     // 대리점
     $routes->get('agency/(:num)', 'AgencyController::show/$1');
