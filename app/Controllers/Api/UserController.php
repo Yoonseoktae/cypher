@@ -55,7 +55,7 @@ class UserController extends BaseApiController
             return $this->errorResponse('사용 불가능한 계정입니다. 상태: ' . ($statusMessage[$user['status']] ?? '알 수 없음'), 403);
         }
 
-        if (strtotime($user['expiry_date']) < time()) {
+        if ($user['expiry_date'] !== null && strtotime($user['expiry_date']) < time()) {
             return $this->errorResponse('만료된 계정입니다', 403);
         }
 
