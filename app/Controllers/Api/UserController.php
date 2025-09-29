@@ -21,7 +21,14 @@ class UserController extends BaseApiController
     public function login()
     {
         $data = $this->getRequestData();
+
+        $appVersion = $data['app_version'] ?? null;
+        $appService = $data['app_service'] ?? null;
         $phoneNumber = $data['phone_number'] ?? null;
+
+        if (!$appService) {
+            return $this->errorResponse('서비스명을 입력하세요', 400);
+        }
 
         if (!$phoneNumber) {
             return $this->errorResponse('전화번호를 입력하세요', 400);
@@ -57,6 +64,7 @@ class UserController extends BaseApiController
 
         // login_at 업데이트
         $this->userModel->update($user['id'], [
+            'app_version' => $appVersion,
             'login_at' => time()
         ]);
 
