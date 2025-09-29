@@ -33,8 +33,14 @@ class UserController extends BaseApiController
             return $this->errorResponse('등록되지 않은 전화번호입니다', 404);
         }
 
-        if ($user['status'] != 0) {
-            return $this->errorResponse('사용 불가능한 계정입니다', 403);
+        // status 체크: 1(인증)만 로그인 가능
+        if ($user['status'] != 1) {
+            $statusMessage = [
+                0 => '계정 미인증',
+                2 => '계정 일시중지',
+                3 => '계정 정지'
+            ];
+            return $this->errorResponse('사용 불가능한 계정입니다. 상태: ' . ($statusMessage[$user['status']] ?? '알 수 없음'), 403);
         }
 
         if (strtotime($user['expiry_date']) < time()) {
