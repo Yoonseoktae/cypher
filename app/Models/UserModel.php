@@ -19,6 +19,7 @@ class UserModel extends Model
         'phone_number',
         'location',
         'app_version',
+        'app_service',
         'status',
         'login_at',
         'registration_date',
