@@ -10,7 +10,7 @@ $routes->get('/', 'Home::index');
 $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($routes) {
     
     // 테스트
-    $routes->match(['get', 'post'], 'hello', 'TestController::hello');
+    $routes->match(['GET', 'POST'], 'hello', 'TestController::hello');
 
     // 로그인
     $routes->post('admin/login', 'AdminController::login');
