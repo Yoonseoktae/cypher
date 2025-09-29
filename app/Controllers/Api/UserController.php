@@ -25,6 +25,14 @@ class UserController extends BaseApiController
         $appVersion = $data['app_version'] ?? null;
         $appService = $data['app_service'] ?? null;
 
+        if (!$appVersion) {
+            return $this->errorResponse('앱버전이 확인되지 않습니다', 400);
+        }
+
+        if (!$appService) {
+            return $this->errorResponse('서비스가 확인되지 않습니다', 400);
+        }
+
         if (!$phoneNumber) {
             return $this->errorResponse('전화번호를 입력하세요', 400);
         }
