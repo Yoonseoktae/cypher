@@ -170,8 +170,9 @@ class UserController extends BaseApiController
 
     public function create()
     {
-        $agencyId = session()->get('agency_id');
-        
+        // $agencyId = session()->get('agency_id');
+        $agencyId = 1;
+
         if (!$agencyId) {
             return $this->errorResponse('로그인이 필요합니다', 401);
         }
@@ -179,26 +180,37 @@ class UserController extends BaseApiController
         $data = $this->getRequestData();
 
         // 간단한 체크
-        if (empty($data['user_code']) || empty($data['name']) || empty($data['phone_number'])) {
+        if (empty($data['name']) || empty($data['phone_number'])) {
             return $this->errorResponse('필수 항목을 입력하세요', 400);
         }
 
         $data['agency_id'] = $agencyId;
         $data['registration_date'] = date('Y-m-d');
-        $data['status'] = '사용가능';
+        $data['status'] = 0;
 
         $userId = $this->userModel->insert($data);
 
         if ($userId) {
+            // 가입 로그
             $this->historyModel->insert([
                 'user_id' => $userId,
-                'action_type' => 'registration',
-                'new_expiry_date' => $data['expiry_date'] ?? null,
-                'new_status' => '사용가능',
-                'created_by' => session()->get('admin_id')
+                'admin_id' => session()->get('admin_id'),
+                'action' => 'register',
+                'field' => NULL,
+                'before_value' => NULL,
+                'after_value' => json_encode([
+                    'name' => $data['name'],
+                    'phone_number' => $data['phone_number'],
+                    'expiry_date' => $data['expiry_date'] ?? null
+                ]),
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null
             ]);
 
-            return $this->successResponse(['user_id' => $userId], '사용자 생성 성공', 201);
+            return $this->respondCreated([
+                'status' => 'success',
+                'message' => '사용자 생성 성공',
+                'data' => ['user_id' => $userId]
+            ]);
         }
 
         return $this->errorResponse('사용자 생성 실패', 500);
@@ -222,13 +234,22 @@ class UserController extends BaseApiController
 
         $data = $this->getRequestData();
 
-        if ($this->userModel->update($id, $data)) {
-            $this->historyModel->insert([
-                'user_id' => $id,
-                'action_type' => 'info_update',
-                'created_by' => session()->get('admin_id')
-            ]);
+        // 변경 로그 기록
+        foreach ($data as $field => $newValue) {
+            if (isset($user[$field]) && $user[$field] != $newValue) {
+                $this->historyModel->insert([
+                    'user_id' => $id,
+                    'admin_id' => session()->get('admin_id'),
+                    'action' => 'update',
+                    'field' => $field,
+                    'before_value' => $user[$field],
+                    'after_value' => $newValue,
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null
+                ]);
+            }
+        }
 
+        if ($this->userModel->update($id, $data)) {
             return $this->successResponse(null, '사용자 수정 성공');
         }
 
