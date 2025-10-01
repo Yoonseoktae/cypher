@@ -6,6 +6,13 @@ $routes->setDefaultMethod('index');
 
 $routes->get('/', 'Home::index');
 
+// Admin 웹 페이지
+$routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($routes) {
+    $routes->get('login', 'AdminController::loginForm');
+    $routes->get('dashboard', 'DashboardController::index');
+    $routes->get('users', 'UserController::index');
+});
+
 // API
 $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($routes) {
     
