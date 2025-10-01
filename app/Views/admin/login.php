@@ -28,7 +28,7 @@
 <body>
     <main class="form-signin">
         <form id="loginForm">
-            <h1 class="h3 mb-3 fw-normal text-center">사이퍼</h1>
+            <h1 class="h3 mb-3 fw-normal text-center">Holic</h1>
 
             <div class="form-floating mb-3">
                 <input type="text" class="form-control" id="username" name="username" placeholder="아이디" required>
