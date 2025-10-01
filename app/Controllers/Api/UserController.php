@@ -55,6 +55,10 @@ class UserController extends BaseApiController
             return $this->errorResponse('사용 불가능한 계정입니다. 상태: ' . ($statusMessage[$user['status']] ?? '알 수 없음'), 403);
         }
 
+        if (!$user['expiry_date']) {
+            return $this->errorResponse('만료일이 지정되지 않았습니다', 400);
+        }
+
         if ($user['expiry_date'] !== null && strtotime($user['expiry_date']) < time()) {
             return $this->errorResponse('만료된 계정입니다', 403);
         }
@@ -83,7 +87,8 @@ class UserController extends BaseApiController
             'name' => $user['name'],
             'phone_number' => $user['phone_number'],
             'status' => $user['status'],
-            'expiry_date' => $user['expiry_date']
+            'expiry_date' => date('Y-m-d', strtotime($user['expiry_date'])),
+            'is_franchise' => $user['is_franchise']
         ], '로그인 성공');
     }
 
