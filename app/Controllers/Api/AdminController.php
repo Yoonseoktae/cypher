@@ -63,4 +63,45 @@ class AdminController extends BaseApiController
         session()->destroy();
         return $this->successResponse(null, '로그아웃 성공');
     }
+
+    public function register()
+    {
+        $data = $this->getRequestData();
+        
+        // 필수 항목 체크
+        if (empty($data['username']) || empty($data['password']) || empty($data['name'])) {
+            return $this->errorResponse('필수 항목을 입력하세요', 400);
+        }
+        
+        // 비밀번호 확인
+        if (empty($data['password_confirm']) || $data['password'] !== $data['password_confirm']) {
+            return $this->errorResponse('비밀번호가 일치하지 않습니다', 400);
+        }
+        
+        // 아이디 중복 체크
+        $existingAdmin = $this->adminModel->where('username', $data['username'])->first();
+        if ($existingAdmin) {
+            return $this->errorResponse('이미 사용중인 아이디입니다', 400);
+        }
+        
+        // 관리자 등록
+        $insertData = [
+            'agency_id' => $data['agency_id'] ?? null,
+            'username' => $data['username'],
+            'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+            'name' => $data['name'],
+            'role' => $data['role'] ?? 'operator',
+            'status' => 1
+        ];
+        
+        $adminId = $this->adminModel->insert($insertData);
+        
+        if ($adminId) {
+            return $this->successResponse([
+                'admin_id' => $adminId
+            ], '회원가입 성공', 201);
+        }
+        
+        return $this->errorResponse('회원가입 실패', 500);
+    }
 }

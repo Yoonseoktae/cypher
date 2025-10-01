@@ -10,4 +10,12 @@ class AdminController extends BaseController
     {
         return view('admin/login');
     }
+
+    public function registerForm()
+    {
+        $data = [
+            'title' => '관리자 회원가입'
+        ];
+        return view('admin/register', $data);
+    }
 }

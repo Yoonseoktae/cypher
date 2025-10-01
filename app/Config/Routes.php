@@ -11,6 +11,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($rout
     $routes->get('login', 'AdminController::loginForm');
     $routes->get('dashboard', 'DashboardController::index');
     $routes->get('users', 'UserController::index');
+    $routes->get('register', 'AdminController::registerForm');
 });
 
 // API
@@ -18,6 +19,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     
     // 테스트
     $routes->match(['GET', 'POST'], 'hello', 'TestController::hello');
+
+    // 관리자
+    $routes->post('admin/register', 'AdminController::register');
 
     // 로그인
     $routes->post('admin/login', 'AdminController::login');

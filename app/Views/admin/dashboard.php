@@ -11,7 +11,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-primary">
                 <div class="card-body">
-                    <h5 class="card-title">총 기사 수</h5>
+                    <h5 class="card-title">총 회원 수</h5>
                     <h2 class="mb-0" id="totalDrivers">-</h2>
                 </div>
             </div>
@@ -19,7 +19,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-success">
                 <div class="card-body">
-                    <h5 class="card-title">활성 기사</h5>
+                    <h5 class="card-title">활성 회원</h5>
                     <h2 class="mb-0" id="activeDrivers">-</h2>
                 </div>
             </div>
