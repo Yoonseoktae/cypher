@@ -222,4 +222,32 @@ class LogController extends BaseApiController
             'stats' => $stats
         ]);
     }
+
+    /**
+     * 특정 사용자의 로그 조회 (이력 다운로드용)
+     * GET /api/v1/logs/user/{phone_number}
+     */
+    public function getUserLogs($phoneNumber)
+    {
+        $data = $this->getRequestData();
+        $limit = $data['limit'] ?? 10000;
+        
+        // 기본값: 최근 1주일
+        $startDate = $data['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
+        $endDate = $data['end_date'] ?? date('Y-m-d');
+        
+        $logs = $this->logModel
+                    ->where('phone_number', $phoneNumber)
+                    ->where('created_at >=', $startDate . ' 00:00:00')
+                    ->where('created_at <=', $endDate . ' 23:59:59')
+                    ->orderBy('created_at', 'DESC')
+                    ->limit($limit)
+                    ->findAll();
+        
+        return $this->respond([
+            'status' => 'success',
+            'data' => $logs,
+            'count' => count($logs)
+        ]);
+    }
 }

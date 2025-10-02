@@ -383,27 +383,45 @@ class UserController extends BaseApiController
         return $this->errorResponse('상태 변경 실패', 500);
     }
 
-    public function getHistory($id = null)
+    /**
+     * 사용자 앱 로그 이력 조회
+     * GET /api/v1/users/{id}/logs
+     */
+    public function getLogs($id)
     {
-        $agencyId = session()->get('agency_id');
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($id);
         
-        if (!$agencyId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
-        }
-
-        $user = $this->userModel
-            ->where('agency_id', $agencyId)
-            ->find($id);
-
         if (!$user) {
-            return $this->errorResponse('사용자를 찾을 수 없습니다', 404);
+            return $this->fail('사용자를 찾을 수 없습니다.', 404);
         }
-
-        $history = $this->historyModel
-            ->where('user_id', $id)
-            ->orderBy('created_at', 'DESC')
-            ->findAll();
-
-        return $this->successResponse($history);
+        
+        // 사용자의 전화번호로 로그 조회
+        $logModel = new \App\Models\AppLogModel();
+        
+        $limit = $this->request->getGet('limit') ?? 1000;
+        
+        $builder = $logModel->where('phone_number', $user['phone_number'])
+                            ->orderBy('created_at', 'DESC');
+        
+        if ($startDate) {
+            $builder->where('created_at >=', $startDate);
+        }
+        if ($endDate) {
+            $builder->where('created_at <=', $endDate . ' 23:59:59');
+        }
+        
+        $logs = $builder->limit($limit)->findAll();
+        
+        return $this->respond([
+            'status' => 'success',
+            'data' => $logs,
+            'count' => count($logs),
+            'user' => [
+                'id' => $user['id'],
+                'name' => $user['name'],
+                'phone_number' => $user['phone_number']
+            ]
+        ]);
     }
 }

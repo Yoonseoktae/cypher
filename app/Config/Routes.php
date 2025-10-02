@@ -58,6 +58,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->post('users/(:num)/extend', 'UserController::extend/$1');
     $routes->put('users/(:num)/status', 'UserController::updateStatus/$1');
     $routes->get('users/(:num)/history', 'UserController::getHistory/$1');
+    $routes->get('users/(:num)/logs', 'UserController::getLogs/$1');
     
     // 사용자 본인
     $routes->get('user/profile', 'UserController::getProfile');
@@ -70,10 +71,12 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->put('notices/(:num)', 'NoticeController::update/$1');
     $routes->delete('notices/(:num)', 'NoticeController::delete/$1');
     $routes->post('notices/(:num)/toggle-pin', 'NoticeController::togglePin/$1');
-    
+
     // 로그
     $routes->post('logs', 'LogController::create');
     $routes->post('logs/batch', 'LogController::batch');
     $routes->get('logs/files', 'LogController::files'); // 관리자용
+    $routes->get('logs/user/(:segment)', 'LogController::getUserLogs/$1');
 
 });
+

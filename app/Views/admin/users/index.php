@@ -57,7 +57,6 @@
                 </table>
             </div>
             
-            <!-- 페이지네이션 -->
             <nav>
                 <ul class="pagination justify-content-center" id="pagination"></ul>
             </nav>
@@ -65,9 +64,93 @@
     </div>
 </main>
 
+<!-- 사용자 수정 모달 -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">사용자 정보 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>이름:</strong> <span id="modal_name"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>전화번호:</strong> <span id="modal_phone"></span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>위치:</strong> <span id="modal_location"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>등록일:</strong> <span id="modal_reg_date"></span>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- 상태 변경 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">상태 변경</h6>
+                    </div>
+                    <div class="card-body">
+                        <select class="form-select" id="modal_status">
+                            <option value="0">비인증</option>
+                            <option value="1">인증</option>
+                            <option value="2">중지</option>
+                            <option value="3">밴</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm mt-2 w-100" onclick="updateStatus()">상태 변경</button>
+                    </div>
+                </div>
+
+                <!-- 만료일 수정 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">만료일 수정</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <input type="date" class="form-control" id="modal_expiry_date">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary btn-sm w-100" onclick="updateExpiryDate()">수정</button>
+                            </div>
+                        </div>
+                        <button class="btn btn-info btn-sm mt-2 w-100" onclick="extendOneMonth()">
+                            <i class="bi bi-calendar-plus"></i> 한 달 연장
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 이력 다운로드 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">사용자 이력</h6>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-success btn-sm w-100" onclick="downloadLogs()">
+                            <i class="bi bi-download"></i> 로그 다운로드 (CSV)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->section('scripts') ?>
 <script>
     let currentPage = 1;
+    let currentUserId = null;
 
     $(document).ready(function() {
         loadUsers(1);
@@ -78,23 +161,19 @@
         const search = $('#searchKeyword').val();
         const status = $('#statusFilter').val();
         
-        $.ajax({
-            url: API_BASE_URL + '/users',
-            method: 'GET',
-            data: {
-                page: page,
-                limit: 20,
-                search: search,
-                status: status
-            },
-            success: function(response) {
-                if (response.status === 'success') {
-                    renderUsersTable(response.data.users);
-                    renderPagination(response.data.pagination);
-                }
-            },
-            error: handleError
-        });
+        api.get('/users', {
+            page: page,
+            limit: 20,
+            search: search,
+            status: status
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                renderUsersTable(response.data.users);
+                renderPagination(response.data.pagination);
+            }
+        })
+        .fail(handleError);
     }
 
     function renderUsersTable(users) {
@@ -107,14 +186,14 @@
                 html += `
                     <tr>
                         <td>${user.id}</td>
-                        <td>${user.name}</td>
-                        <td>${user.phone_number}</td>
+                        <td>${escapeHtml(user.name)}</td>
+                        <td>${escapeHtml(user.phone_number)}</td>
                         <td>${user.registration_date}</td>
                         <td>${user.expiry_date}</td>
                         <td>${getStatusBadge(user.status)}</td>
                         <td>
-                            <button class="btn btn-sm btn-warning" onclick="editUser(${user.id})">
-                                <i class="bi bi-pencil"></i>
+                            <button class="btn btn-sm btn-warning" onclick="openEditModal(${user.id})">
+                                <i class="bi bi-pencil"></i> 수정
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
                                 <i class="bi bi-trash"></i>
@@ -150,25 +229,199 @@
         return badges[status] || '<span class="badge bg-secondary">알수없음</span>';
     }
 
-    function viewUser(id) {
-        location.href = `/admin/users/${id}`;
+    function openEditModal(userId) {
+        currentUserId = userId;
+        
+        api.get('/users/' + userId)
+            .done(function(response) {
+                if (response.status === 'success') {
+                    const user = response.data;
+                    console.log(user);
+                    // 모달에 데이터 채우기
+                    $('#modal_name').text(user.name);
+                    $('#modal_phone').text(user.phone_number);
+                    $('#modal_location').text(user.location || '-');
+                    $('#modal_reg_date').text(user.registration_date);
+                    $('#modal_status').val(user.status);
+                    $('#modal_expiry_date').val(user.expiry_date);
+                    
+                    // 모달 열기
+                    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+                }
+            })
+            .fail(handleError);
     }
 
-    function editUser(id) {
-        location.href = `/admin/users/${id}/edit`;
+    function updateStatus() {
+        const newStatus = $('#modal_status').val();
+        
+        if (!confirm('상태를 변경하시겠습니까?')) return;
+        
+        api.put('/users/' + currentUserId + '/status', {
+            status: newStatus
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                alert('상태가 변경되었습니다.');
+                loadUsers(currentPage);
+                openEditModal(currentUserId);
+            }
+        })
+        .fail(handleError);
+    }
+
+    function updateExpiryDate() {
+        const newDate = $('#modal_expiry_date').val();
+        
+        if (!newDate) {
+            alert('만료일을 선택하세요.');
+            return;
+        }
+        
+        if (!confirm('만료일을 변경하시겠습니까?')) return;
+        
+        api.post('/users/' + currentUserId + '/extend', {
+            expiry_date: newDate
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                alert('만료일이 변경되었습니다.');
+                loadUsers(currentPage);
+                openEditModal(currentUserId);
+            }
+        })
+        .fail(handleError);
+    }
+
+    function extendOneMonth() {
+        const currentDate = $('#modal_expiry_date').val();
+        const date = new Date(currentDate);
+        date.setMonth(date.getMonth() + 1);
+        const newDate = date.toISOString().split('T')[0];
+        
+        if (!confirm('만료일을 한 달 연장하시겠습니까?\n' + currentDate + ' → ' + newDate)) return;
+        
+        api.post('/users/' + currentUserId + '/extend', {
+            expiry_date: newDate
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                alert('만료일이 한 달 연장되었습니다.');
+                loadUsers(currentPage);
+                openEditModal(currentUserId);
+            }
+        })
+        .fail(handleError);
+    }
+
+    function downloadLogs() {
+        api.get('/users/' + currentUserId)
+            .done(function(userResponse) {
+                if (userResponse.status === 'success') {
+                    const phoneNumber = userResponse.data.phone_number;
+                    const userName = userResponse.data.name;
+                    
+                    const startDate = $('#log_start_date').val();
+                    const endDate = $('#log_end_date').val();
+                    
+                    let url = '/logs/user/' + phoneNumber + '?limit=10000';
+                    if (startDate) url += '&start_date=' + startDate;
+                    if (endDate) url += '&end_date=' + endDate;
+                    
+                    api.get(url)
+                        .done(function(response) {
+                            if (response.status === 'success') {
+                                const logs = response.data;
+                                
+                                if (logs.length === 0) {
+                                    alert('로그 이력이 없습니다.');
+                                    return;
+                                }
+                                
+                                let excelContent = `
+                                    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                                    <head>
+                                        <meta charset="utf-8">
+                                        <!--[if gte mso 9]>
+                                        <xml>
+                                            <x:ExcelWorkbook>
+                                                <x:ExcelWorksheets>
+                                                    <x:ExcelWorksheet>
+                                                        <x:Name>로그이력</x:Name>
+                                                        <x:WorksheetOptions>
+                                                            <x:DisplayGridlines/>
+                                                        </x:WorksheetOptions>
+                                                    </x:ExcelWorksheet>
+                                                </x:ExcelWorksheets>
+                                            </x:ExcelWorkbook>
+                                        </xml>
+                                        <![endif]-->
+                                    </head>
+                                    <body>
+                                        <table border="1">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>전화번호</th>
+                                                    <th>앱버전</th>
+                                                    <th>서비스타입</th>
+                                                    <th>로그내용</th>
+                                                    <th>생성일시</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                `;
+                                
+                                logs.forEach(function(log) {
+                                    excelContent += `
+                                        <tr>
+                                            <td>${log.id}</td>
+                                            <td>${log.phone_number}</td>
+                                            <td>${log.app_version || ''}</td>
+                                            <td>${log.app_service || ''}</td>
+                                            <td>${(log.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+                                            <td>${log.created_at}</td>
+                                        </tr>
+                                    `;
+                                });
+                                
+                                excelContent += `
+                                            </tbody>
+                                        </table>
+                                    </body>
+                                    </html>
+                                `;
+                                
+                                const blob = new Blob(['\ufeff', excelContent], {
+                                    type: 'application/vnd.ms-excel;charset=utf-8;'
+                                });
+                                
+                                const link = document.createElement('a');
+                                const filename = `${userName}_${currentUserId}.xls`;
+                                
+                                link.href = URL.createObjectURL(blob);
+                                link.download = filename;
+                                link.style.display = 'none';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(link.href);
+                            }
+                        })
+                        .fail(handleError);
+                }
+            })
+            .fail(handleError);
     }
 
     function deleteUser(id) {
         if (confirm('정말 삭제하시겠습니까?')) {
-            $.ajax({
-                url: API_BASE_URL + '/users/' + id,
-                method: 'DELETE',
-                success: function(response) {
+            api.delete('/users/' + id)
+                .done(function(response) {
                     alert('삭제되었습니다.');
                     loadUsers(currentPage);
-                },
-                error: handleError
-            });
+                })
+                .fail(handleError);
         }
     }
 </script>
