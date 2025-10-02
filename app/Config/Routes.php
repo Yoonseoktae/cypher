@@ -8,10 +8,20 @@ $routes->get('/', 'Home::index');
 
 // Admin 웹 페이지
 $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($routes) {
+
+    $routes->get('/', 'AdminController::index');
     $routes->get('login', 'AdminController::loginForm');
-    $routes->get('dashboard', 'DashboardController::index');
-    $routes->get('users', 'UserController::index');
     $routes->get('register', 'AdminController::registerForm');
+    $routes->get('dashboard', 'DashboardController::index');
+    
+    // 사용자 관리
+    $routes->get('users', 'UserController::index');
+    $routes->get('users/create', 'UserController::create');
+    
+    // 대리점 관리
+    $routes->get('agency/info', 'AgencyController::info');
+    $routes->get('agency/create', 'AgencyController::create');
+
 });
 
 // API
@@ -47,4 +57,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     // 사용자 본인
     $routes->get('user/profile', 'UserController::getProfile');
     $routes->put('user/profile', 'UserController::updateProfile');
+
+    // 로그
+    $routes->post('logs', 'LogController::create');
+    $routes->post('logs/batch', 'LogController::batch');
+    $routes->get('logs/files', 'LogController::files'); // 관리자용
+
 });
