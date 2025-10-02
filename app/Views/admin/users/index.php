@@ -21,10 +21,9 @@
                 <div class="col-md-3">
                     <select class="form-select" id="statusFilter">
                         <option value="">전체 상태</option>
-                        <option value="0">비인증</option>
                         <option value="1">인증</option>
-                        <option value="2">중지</option>
-                        <option value="3">밴</option>
+                        <option value="2">테스터</option>
+                        <option value="3">정지</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -44,7 +43,6 @@
                             <th>ID</th>
                             <th>이름</th>
                             <th>전화번호</th>
-                            <th>위치</th>
                             <th>등록일</th>
                             <th>만료일</th>
                             <th>상태</th>
@@ -111,14 +109,10 @@
                         <td>${user.id}</td>
                         <td>${user.name}</td>
                         <td>${user.phone_number}</td>
-                        <td>${user.location || '-'}</td>
                         <td>${user.registration_date}</td>
                         <td>${user.expiry_date}</td>
                         <td>${getStatusBadge(user.status)}</td>
                         <td>
-                            <button class="btn btn-sm btn-info" onclick="viewUser(${user.id})">
-                                <i class="bi bi-eye"></i>
-                            </button>
                             <button class="btn btn-sm btn-warning" onclick="editUser(${user.id})">
                                 <i class="bi bi-pencil"></i>
                             </button>
@@ -149,10 +143,9 @@
 
     function getStatusBadge(status) {
         const badges = {
-            0: '<span class="badge bg-secondary">비인증</span>',
             1: '<span class="badge bg-success">인증</span>',
-            2: '<span class="badge bg-warning">중지</span>',
-            3: '<span class="badge bg-danger">밴</span>'
+            2: '<span class="badge bg-warning">테스터</span>',
+            3: '<span class="badge bg-danger">정지</span>'
         };
         return badges[status] || '<span class="badge bg-secondary">알수없음</span>';
     }
