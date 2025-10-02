@@ -2,6 +2,11 @@
     <div class="sidebar-sticky pt-3">
         <ul class="nav flex-column">
             <li class="nav-item">
+                <a class="nav-link <?= $active_menu == 'notices' ? 'active' : '' ?>" href="/admin/notices">
+                    <i class="bi bi-megaphone"></i> 공지사항
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link <?= $active_menu == 'dashboard' ? 'active' : '' ?>" href="/admin/dashboard">
                     <i class="bi bi-house-door"></i> 대시보드
                 </a>

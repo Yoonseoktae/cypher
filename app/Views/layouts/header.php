@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-base-url" content="<?= base_url('api/v1') ?>">
     <title><?= $title ?? 'Holic' ?></title>
     
     <!-- Bootstrap 5 CSS -->
@@ -62,13 +63,13 @@
 <body>
     <!-- 상단 네비게이션 -->
     <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/">Holic</a>
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/">택시 관리 시스템</a>
         <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="navbar-nav">
             <div class="nav-item text-nowrap">
-                <a class="nav-link px-3" href="#" onclick="logout()">로그아웃</a>
+                <a class="nav-link px-3" href="#" onclick="logout(); return false;">로그아웃</a>
             </div>
         </div>
     </nav>

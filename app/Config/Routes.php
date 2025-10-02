@@ -22,6 +22,11 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($rout
     $routes->get('agency/info', 'AgencyController::info');
     $routes->get('agency/create', 'AgencyController::create');
 
+    // 공지사항
+    $routes->get('notices', 'NoticeController::index');
+    $routes->get('notices/create', 'NoticeController::create');
+    $routes->get('notices/(:num)/edit', 'NoticeController::edit/$1');
+
 });
 
 // API
@@ -58,6 +63,14 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->get('user/profile', 'UserController::getProfile');
     $routes->put('user/profile', 'UserController::updateProfile');
 
+    // 공지사항
+    $routes->get('notices', 'NoticeController::index');
+    $routes->post('notices', 'NoticeController::create');
+    $routes->get('notices/(:num)', 'NoticeController::show/$1');
+    $routes->put('notices/(:num)', 'NoticeController::update/$1');
+    $routes->delete('notices/(:num)', 'NoticeController::delete/$1');
+    $routes->post('notices/(:num)/toggle-pin', 'NoticeController::togglePin/$1');
+    
     // 로그
     $routes->post('logs', 'LogController::create');
     $routes->post('logs/batch', 'LogController::batch');
