@@ -4,20 +4,20 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 
-class UserController extends BaseController
+class AgencyController extends BaseController
 {
-    public function index()
+    public function info()
     {
         if (!session()->get('logged_in')) {
             return redirect()->to('/admin/login');
         }
         
         $data = [
-            'title' => '사용자 관리',
-            'active_menu' => 'users'
+            'title' => '대리점 정보',
+            'active_menu' => 'agency'
         ];
         
-        return view('admin/users/index', $data);
+        return view('admin/agency/info', $data);
     }
 
     public function create()
@@ -27,10 +27,10 @@ class UserController extends BaseController
         }
         
         $data = [
-            'title' => '사용자 등록',
-            'active_menu' => 'users'
+            'title' => '대리점 등록',
+            'active_menu' => 'agency'
         ];
         
-        return view('admin/users/create', $data);
+        return view('admin/agency/create', $data);
     }
 }

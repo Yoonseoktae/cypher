@@ -12,13 +12,8 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $active_menu == 'agency' ? 'active' : '' ?>" href="/admin/agency">
+                <a class="nav-link <?= $active_menu == 'agency' ? 'active' : '' ?>" href="/admin/agency/info">
                     <i class="bi bi-building"></i> 대리점 정보
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= $active_menu == 'settings' ? 'active' : '' ?>" href="/admin/settings">
-                    <i class="bi bi-gear"></i> 설정
                 </a>
             </li>
         </ul>
