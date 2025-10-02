@@ -46,11 +46,10 @@ class UserController extends BaseApiController
             return $this->errorResponse('계정을 찾을 수 없습니다', 404);
         }
 
-        if ($user['status'] != 1) {
+        if (!in_array($user['status'], ['1','2'])) {
             $statusMessage = [
                 0 => '계정 미인증',
-                2 => '계정 중지',
-                3 => '계정 밴'
+                3 => '계정 정지'
             ];
             return $this->errorResponse('사용 불가능한 계정입니다. 상태: ' . ($statusMessage[$user['status']] ?? '알 수 없음'), 403);
         }
