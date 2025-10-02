@@ -3,20 +3,25 @@
 namespace App\Controllers\Api;
 
 use CodeIgniter\API\ResponseTrait;
+use App\Models\AppLogModel;
 
 class LogController extends BaseApiController
 {
     use ResponseTrait;
+
+    private $logModel;
 
     private $logPath = WRITEPATH . 'logs/app/'; // writable/logs/app/
     private $maxLogDays = 30; // 보관 기간 (일)
 
     public function __construct()
     {
-        // 로그 디렉토리 생성
-        if (!is_dir($this->logPath)) {
-            mkdir($this->logPath, 0755, true);
-        }
+        $this->logModel = new AppLogModel();
+
+        // // 로그 디렉토리 생성
+        // if (!is_dir($this->logPath)) {
+        //     mkdir($this->logPath, 0755, true);
+        // }
     }
 
     /**
@@ -24,6 +29,36 @@ class LogController extends BaseApiController
      * POST /api/v1/logs
      */
     public function create()
+    {
+        $data = $this->getRequestData();
+
+        if (!isset($data['phone_number']) || empty($data['phone_number'])) {
+            return $this->fail('핸드폰 번호가 필요합니다.', 400);
+        }
+
+        $data = [
+            'phone_number' => $data['phone_number'],
+            'app_version' => $data['app_version'] ?? null,
+            'app_service' => $data['app_service'] ?? null,
+            'content' => $data['content'] ?? '',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->logModel->createLog($data)) {
+            return $this->respondCreated([
+                'status' => 'success',
+                'message' => '로그가 저장되었습니다.'
+            ]);
+        }
+
+        return $this->fail('로그 저장에 실패했습니다.', 500);
+    }
+
+    /**
+     * 로그 저장 API
+     * POST /api/v1/logs
+     */
+    public function create_shell()
     {
         $data = $this->getRequestData();
 
@@ -64,55 +99,6 @@ class LogController extends BaseApiController
     }
 
     /**
-     * 배치로 여러 로그 저장
-     * POST /api/v1/logs/batch
-     */
-    public function batch()
-    {
-        
-        $data = $this->getRequestData();
-
-        if (!isset($data['logs']) || !is_array($data['logs'])) {
-            return $this->fail('logs 배열이 필요합니다.', 400);
-        }
-
-        $saved = 0;
-        $failed = 0;
-
-        foreach ($data['logs'] as $log) {
-            if (!isset($log['log_data'])) {
-                $failed++;
-                continue;
-            }
-
-            $userId = $log['user_id'] ?? 'unknown';
-            $logType = $log['log_type'] ?? 'general';
-            $logData = $log['log_data'];
-            
-            $date = date('Y-m-d');
-            $filename = "{$date}_{$logType}.log";
-            $filepath = $this->logPath . $filename;
-
-            $timestamp = date('Y-m-d H:i:s');
-            $logEntry = "[{$timestamp}] [USER:{$userId}] {$logData}" . PHP_EOL;
-
-            if (file_put_contents($filepath, $logEntry, FILE_APPEND | LOCK_EX) !== false) {
-                $saved++;
-            } else {
-                $failed++;
-            }
-        }
-
-        $this->cleanOldLogs();
-
-        return $this->respond([
-            'status' => 'success',
-            'saved' => $saved,
-            'failed' => $failed
-        ]);
-    }
-
-    /**
      * 30일 이상 지난 로그 파일 삭제
      */
     private function cleanOldLogs()
@@ -148,6 +134,92 @@ class LogController extends BaseApiController
             'status' => 'success',
             'files' => $fileList,
             'total' => count($fileList)
+        ]);
+    }
+
+    /**
+     * 핸드폰번호별 로그 조회
+     * GET /api/v1/logs/phone/{phone_number}
+     */
+    public function getByPhone($phoneNumber)
+    {
+        $data = $this->getRequestData();
+        $limit = $data['limit'] ?? 100;
+        $offset = $data['offset'] ?? 0;
+        $service = $data['service'];
+
+        if ($service) {
+            $logs = $this->logModel->getByPhoneAndService($phoneNumber, $service, $limit, $offset);
+        } else {
+            $logs = $this->logModel->getByPhone($phoneNumber, $limit, $offset);
+        }
+
+        return $this->respond([
+            'status' => 'success',
+            'data' => $logs,
+            'count' => count($logs)
+        ]);
+    }
+
+    /**
+     * 로그 내용 검색
+     * GET /api/v1/logs/search
+     */
+    public function search()
+    {
+        $data = $this->getRequestData();
+        $keyword = $data['keyword'];
+        $phoneNumber = $data['phone_number'];
+        $limit = $data['limit'] ?? 100;
+        $offset = $data['offset'] ?? 0;
+
+        if (!$keyword) {
+            return $this->fail('검색 키워드가 필요합니다.', 400);
+        }
+
+        // FULLTEXT 검색 사용
+        $logs = $this->logModel->searchContent($keyword, $phoneNumber, $limit, $offset);
+
+        return $this->respond([
+            'status' => 'success',
+            'keyword' => $keyword,
+            'data' => $logs,
+            'count' => count($logs)
+        ]);
+    }
+
+    /**
+     * 핸드폰번호별 통계
+     * GET /api/v1/logs/phone/{phone_number}/stats
+     */
+    public function getPhoneStats($phoneNumber)
+    {
+        $data = $this->getRequestData();
+        $days = $data['days'] ?? 7;
+        $stats = $this->logModel->getPhoneStats($phoneNumber, $days);
+
+        return $this->respond([
+            'status' => 'success',
+            'phone_number' => $phoneNumber,
+            'period' => "{$days}일",
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * 앱 버전별 통계
+     * GET /api/v1/logs/stats/version
+     */
+    public function getVersionStats()
+    {
+        $data = $this->getRequestData();
+        $days = $data['days'] ?? 7;
+        $stats = $this->logModel->getVersionStats($days);
+
+        return $this->respond([
+            'status' => 'success',
+            'period' => "{$days}일",
+            'stats' => $stats
         ]);
     }
 }
