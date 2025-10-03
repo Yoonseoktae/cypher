@@ -22,4 +22,12 @@ class AgencyModel extends Model
     protected $useTimestamps = true;
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
+
+    public function getAgencyList()
+    {
+        return $this->select('id, name')
+                    ->where('status', 1)
+                    ->orderBy('name', 'ASC')
+                    ->findAll();
+    }
 }

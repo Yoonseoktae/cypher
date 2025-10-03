@@ -66,7 +66,7 @@
                 }),
                 success: function(response) {
                     if (response.status === 'success') {
-                        alert('로그인 성공!');
+                        // alert('로그인 성공!');
                         location.href = '/admin/dashboard';
                     }
                 },

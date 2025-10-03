@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use CodeIgniter\RESTful\ResourceController;
+use CodeIgniter\API\ResponseTrait;
 
 class BaseApiController extends ResourceController
 {
@@ -10,6 +11,10 @@ class BaseApiController extends ResourceController
     
     protected function getRequestData()
     {
+        if (!empty($_GET)) {
+            return $_GET;
+        }
+        
         $input = file_get_contents('php://input');
         $data = json_decode($input, true);
         

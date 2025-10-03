@@ -48,6 +48,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->post('agency', 'AgencyController::create');
     $routes->put('agency', 'AgencyController::modify');
     $routes->get('agency/dashboard/stats', 'AgencyController::getDashboardStats');
+    $routes->get('agency/list', 'AgencyController::getList');
 
     // 사용자 관리
     $routes->get('users', 'UserController::index');

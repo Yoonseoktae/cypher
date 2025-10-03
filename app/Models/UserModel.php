@@ -29,4 +29,66 @@ class UserModel extends Model
     protected $useTimestamps = true;
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
+
+    /**
+     * 만료된 회원 수 조회
+     */
+    public function getExpiredCount($agencyId = null)
+    {
+        $builder = $this->where('expiry_date <', date('Y-m-d'));
+        
+        if ($agencyId) {
+            $builder->where('agency_id', $agencyId);
+        }
+        
+        return $builder->countAllResults();
+    }
+
+    /**
+     * 만료 임박 회원 수 조회 (7일 이내)
+     */
+    public function getExpiringSoonCount($agencyId = null)
+    {
+        $today = date('Y-m-d');
+        $sevenDaysLater = date('Y-m-d', strtotime('+7 days'));
+        
+        $builder = $this->where('expiry_date >=', $today)
+                        ->where('expiry_date <=', $sevenDaysLater);
+        
+        if ($agencyId) {
+            $builder->where('agency_id', $agencyId);
+        }
+        
+        return $builder->countAllResults();
+    }
+
+    /**
+     * 이번주 신규 회원 수
+     */
+    public function getThisWeekNewCount($agencyId = null)
+    {
+        $startOfWeek = date('Y-m-d', strtotime('monday this week'));
+        
+        $builder = $this->where('registration_date >=', $startOfWeek);
+        
+        if ($agencyId) {
+            $builder->where('agency_id', $agencyId);
+        }
+        
+        return $builder->countAllResults();
+    }
+
+    /**
+     * 최근 등록 회원 리스트
+     */
+    public function getRecentUsers($limit = 10, $agencyId = null)
+    {
+        $builder = $this->orderBy('registration_date', 'DESC');
+        
+        if ($agencyId) {
+            $builder->where('agency_id', $agencyId);
+        }
+        
+        return $builder->limit($limit)->findAll();
+    }
 }
