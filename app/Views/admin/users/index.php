@@ -145,7 +145,7 @@
                 </div>
 
                 <!-- 가입일 수정 -->
-                <div class="card mb-3">
+                <!-- <div class="card mb-3">
                     <div class="card-header">
                         <h6 class="mb-0">가입일 수정</h6>
                     </div>
@@ -159,7 +159,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- 상태 변경 -->
                 <div class="card mb-3">
