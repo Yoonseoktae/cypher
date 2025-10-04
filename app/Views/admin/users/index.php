@@ -83,7 +83,7 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <strong>위치:</strong> <span id="modal_location"></span>
+                        <strong>작동방식:</strong> <span id="modal_franchise"></span>
                     </div>
                     <div class="col-md-6">
                         <strong>등록일:</strong> <span id="modal_reg_date"></span>
@@ -91,6 +91,37 @@
                 </div>
 
                 <hr>
+
+                <!-- 기본 정보 수정 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">기본 정보 수정</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">이름</label>
+                            <input type="text" class="form-control" id="edit_name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">전화번호</label>
+                            <input type="text" class="form-control" id="edit_phone">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">작동방식</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit_is_franchise" id="edit_nonFranchise" value="0">
+                                    <label class="form-check-label" for="edit_nonFranchise">비가맹</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit_is_franchise" id="edit_franchise" value="1">
+                                    <label class="form-check-label" for="edit_franchise">가맹</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100" onclick="updateUserInfo()">정보 수정</button>
+                    </div>
+                </div>
 
                 <!-- 상태 변경 -->
                 <div class="card mb-3">
@@ -128,14 +159,24 @@
                     </div>
                 </div>
 
-                <!-- 이력 다운로드 -->
+                <!-- 로그 다운로드 -->
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="mb-0">사용자 이력</h6>
+                        <h6 class="mb-0">사용자 로그 이력</h6>
                     </div>
                     <div class="card-body">
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label">시작일</label>
+                                <input type="date" class="form-control form-control-sm" id="log_start_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">종료일</label>
+                                <input type="date" class="form-control form-control-sm" id="log_end_date">
+                            </div>
+                        </div>
                         <button class="btn btn-success btn-sm w-100" onclick="downloadLogs()">
-                            <i class="bi bi-download"></i> 로그 다운로드 (CSV)
+                            <i class="bi bi-download"></i> 로그 이력 다운로드
                         </button>
                     </div>
                 </div>
@@ -236,38 +277,49 @@
             .done(function(response) {
                 if (response.status === 'success') {
                     const user = response.data;
-                    console.log(user);
-                    // 모달에 데이터 채우기
+                    
                     $('#modal_name').text(user.name);
                     $('#modal_phone').text(user.phone_number);
-                    $('#modal_location').text(user.location || '-');
+                    $('#modal_franchise').text(user.is_franchise == 1 ? '가맹' : '비가맹');
                     $('#modal_reg_date').text(user.registration_date);
                     $('#modal_status').val(user.status);
                     $('#modal_expiry_date').val(user.expiry_date);
                     
-                    // 모달 열기
+                    // 수정 폼에 현재 값 설정
+                    $('#edit_name').val(user.name);
+                    $('#edit_phone').val(user.phone_number);
+                    $(`input[name="edit_is_franchise"][value="${user.is_franchise}"]`).prop('checked', true);
+                    
                     new bootstrap.Modal(document.getElementById('editUserModal')).show();
                 }
             })
             .fail(handleError);
     }
 
-    function updateStatus() {
-        const newStatus = $('#modal_status').val();
+    function updateUserInfo() {
+        const data = {
+            name: $('#edit_name').val().trim(),
+            phone_number: $('#edit_phone').val().trim(),
+            is_franchise: $('input[name="edit_is_franchise"]:checked').val()
+        };
         
-        if (!confirm('상태를 변경하시겠습니까?')) return;
+        if (!confirm('정보를 수정하시겠습니까?')) return;
         
-        api.put('/users/' + currentUserId + '/status', {
-            status: newStatus
-        })
-        .done(function(response) {
-            if (response.status === 'success') {
-                alert('상태가 변경되었습니다.');
-                loadUsers(currentPage);
-                openEditModal(currentUserId);
-            }
-        })
-        .fail(handleError);
+        api.put('/users/' + currentUserId, data)
+            .done(function(response) {
+                if (response.status === 'success') {
+                    alert('수정되었습니다.');
+                    loadUsers(currentPage);
+                    openEditModal(currentUserId);
+                }
+            })
+            .fail(function(xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.messages) {
+                    alert(xhr.responseJSON.messages.error);
+                } else {
+                    handleError(xhr);
+                }
+            });
     }
 
     function updateExpiryDate() {

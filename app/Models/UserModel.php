@@ -17,6 +17,7 @@ class UserModel extends Model
         'agency_id',
         'name',
         'phone_number',
+        'is_franchise',
         'location',
         'app_version',
         'app_service',
@@ -90,5 +91,20 @@ class UserModel extends Model
         }
         
         return $builder->limit($limit)->findAll();
+    }
+
+    /**
+     * 전화번호 + 대리점 중복 체크
+     */
+    public function isDuplicatePhone($phoneNumber, $agencyId, $excludeUserId = null)
+    {
+        $builder = $this->where('phone_number', $phoneNumber)
+                        ->where('agency_id', $agencyId);
+        
+        if ($excludeUserId) {
+            $builder->where('id !=', $excludeUserId);
+        }
+        
+        return $builder->countAllResults() > 0;
     }
 }

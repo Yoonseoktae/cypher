@@ -143,42 +143,6 @@ class UserController extends BaseApiController
         return $this->successResponse(null, '로그아웃 성공');
     }
 
-    // ============ 사용자 본인 프로필 ============
-    
-    public function getProfile()
-    {
-        $userId = session()->get('user_id');
-        
-        if (!$userId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
-        }
-
-        $user = $this->userModel->find($userId);
-
-        if (!$user) {
-            return $this->errorResponse('사용자를 찾을 수 없습니다', 404);
-        }
-
-        return $this->successResponse($user);
-    }
-
-    public function updateProfile()
-    {
-        $userId = session()->get('user_id');
-        
-        if (!$userId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
-        }
-
-        $data = $this->getRequestData();
-
-        if ($this->userModel->update($userId, $data)) {
-            return $this->successResponse(null, '프로필 업데이트 성공');
-        }
-
-        return $this->errorResponse('프로필 업데이트 실패', 500);
-    }
-
     public function show($id = null)
     {
         $agencyId = session()->get('agency_id');
@@ -200,90 +164,73 @@ class UserController extends BaseApiController
 
     public function create()
     {
-        // $agencyId = session()->get('agency_id');
-        $agencyId = 1;
-
-        if (!$agencyId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
-        }
-
         $data = $this->getRequestData();
-
-        // 간단한 체크
-        if (empty($data['name']) || empty($data['phone_number'])) {
-            return $this->errorResponse('필수 항목을 입력하세요', 400);
-        }
-
-        $data['agency_id'] = $agencyId;
-        $data['registration_date'] = date('Y-m-d');
-        $data['status'] = 0;
-
-        $userId = $this->userModel->insert($data);
-
-        if ($userId) {
-            // 가입 로그
-            $this->historyModel->insert([
-                'user_id' => $userId,
-                'admin_id' => session()->get('admin_id'),
-                'action' => 'register',
-                'field' => NULL,
-                'before_value' => NULL,
-                'after_value' => json_encode([
-                    'name' => $data['name'],
-                    'phone_number' => $data['phone_number'],
-                    'expiry_date' => $data['expiry_date'] ?? null
-                ]),
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null
-            ]);
-
-            return $this->respondCreated([
-                'status' => 'success',
-                'message' => '사용자 생성 성공',
-                'data' => ['user_id' => $userId]
-            ]);
-        }
-
-        return $this->errorResponse('사용자 생성 실패', 500);
-    }
-
-    public function update($id = null)
-    {
         $agencyId = session()->get('agency_id');
         
-        if (!$agencyId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
+        // 유효성 검사
+        if (empty($data['name']) || empty($data['phone_number'])) {
+            return $this->fail('이름과 전화번호를 입력하세요.', 400);
         }
-
-        $user = $this->userModel
-            ->where('agency_id', $agencyId)
-            ->find($id);
-
-        if (!$user) {
-            return $this->errorResponse('사용자를 찾을 수 없습니다', 404);
+        
+        $userModel = new \App\Models\UserModel();
+        
+        // 전화번호 + 대리점 중복 체크
+        if ($userModel->isDuplicatePhone($data['phone_number'], $agencyId)) {
+            return $this->fail('이미 등록된 전화번호입니다.', 400);
         }
+        
+        $insertData = [
+            'agency_id' => $agencyId,
+            'name' => $data['name'],
+            'phone_number' => $data['phone_number'],
+            'is_franchise' => $data['is_franchise'] ?? 0,
+            'registration_date' => date('Y-m-d'),
+            'expiry_date' => date('Y-m-d', strtotime('+1 month')),
+            'status' => 1
+        ];
+        
+        if ($userModel->insert($insertData)) {
+            return $this->respondCreated([
+                'status' => 'success',
+                'message' => '사용자가 등록되었습니다.'
+            ]);
+        }
+        
+        return $this->fail('등록에 실패했습니다.', 500);
+    }
 
+    public function modify($id)
+    {
         $data = $this->getRequestData();
-
-        // 변경 로그 기록
-        foreach ($data as $field => $newValue) {
-            if (isset($user[$field]) && $user[$field] != $newValue) {
-                $this->historyModel->insert([
-                    'user_id' => $id,
-                    'admin_id' => session()->get('admin_id'),
-                    'action' => 'update',
-                    'field' => $field,
-                    'before_value' => $user[$field],
-                    'after_value' => $newValue,
-                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null
-                ]);
+        $agencyId = session()->get('agency_id');
+        
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($id);
+        
+        if (!$user || $user['agency_id'] != $agencyId) {
+            return $this->fail('사용자를 찾을 수 없습니다.', 404);
+        }
+        
+        // 전화번호 변경 시 중복 체크
+        if (isset($data['phone_number']) && $data['phone_number'] != $user['phone_number']) {
+            if ($userModel->isDuplicatePhone($data['phone_number'], $agencyId, $id)) {
+                return $this->fail('이미 등록된 전화번호입니다.', 400);
             }
         }
-
-        if ($this->userModel->update($id, $data)) {
-            return $this->successResponse(null, '사용자 수정 성공');
+        
+        $updateData = [];
+        if (isset($data['name'])) $updateData['name'] = $data['name'];
+        if (isset($data['phone_number'])) $updateData['phone_number'] = $data['phone_number'];
+        if (isset($data['is_franchise'])) $updateData['is_franchise'] = $data['is_franchise'];
+        
+        if ($userModel->update($id, $updateData)) {
+            return $this->respond([
+                'status' => 'success',
+                'message' => '수정되었습니다.'
+            ]);
         }
-
-        return $this->errorResponse('사용자 수정 실패', 500);
+        
+        return $this->fail('수정에 실패했습니다.', 500);
     }
 
     public function delete($id = null)
