@@ -23,10 +23,29 @@
 
                         <div class="mb-3">
                             <label for="phone_number" class="form-label">전화번호 <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" id="phone_number" placeholder="010-1234-5678" required>
+                            <input type="tel" class="form-control" id="phone_number" placeholder="01012345678" required>
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label">서비스타입 <span class="text-danger">*</span></label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="app_service" id="normalService" value="normal" checked>
+                                    <label class="form-check-label" for="normalService">일반</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="app_service" id="vantiService" value="venti">
+                                    <label class="form-check-label" for="vantiService">벤티</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="signup_date" class="form-label">가입날짜</label>
+                            <input type="date" class="form-control" id="signup_date">
+                        </div>
+
+                        <div class="mb-3" id="franchiseSection">
                             <label class="form-label">작동방식 <span class="text-danger">*</span></label>
                             <div>
                                 <div class="form-check form-check-inline">
@@ -64,18 +83,35 @@
 <?= $this->section('scripts') ?>
 <script>
 $(document).ready(function() {
+    // 서비스타입에 따라 작동방식 표시/숨김
+    $('input[name="app_service"]').on('change', function() {
+        if ($(this).val() == 'normal') {
+            $('#franchiseSection').show();
+        } else { // venti
+            $('#franchiseSection').hide();
+        }
+    });
+
     $('#userForm').on('submit', function(e) {
         e.preventDefault();
+        
+        const appService = $('input[name="app_service"]:checked').val();
         
         const data = {
             name: $('#name').val().trim(),
             phone_number: $('#phone_number').val().trim(),
-            is_franchise: $('input[name="is_franchise"]:checked').val(),
+            app_service: appService,
+            signup_date: $('#signup_date').val(),
             status: $('#status').val()
         };
         
+        // normal일 때만 is_franchise 추가
+        if (appService == 'normal') {
+            data.is_franchise = $('input[name="is_franchise"]:checked').val();
+        }
+
         if (!data.name || !data.phone_number) {
-            alert('모든 필수 항목을 입력하세요.');
+            alert('필수 항목을 입력하세요.');
             return;
         }
         

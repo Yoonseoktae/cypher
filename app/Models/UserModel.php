@@ -23,6 +23,7 @@ class UserModel extends Model
         'app_service',
         'status',
         'login_at',
+        'signup_date',
         'registration_date',
         'expiry_date'
     ];
@@ -32,7 +33,7 @@ class UserModel extends Model
     protected $updatedField = 'updated_at';
 
     /**
-     * 만료된 회원 수 조회
+     * 유효기간 지난 회원 수 조회
      */
     public function getExpiredCount($agencyId = null)
     {
@@ -46,15 +47,16 @@ class UserModel extends Model
     }
 
     /**
-     * 만료 임박 회원 수 조회 (7일 이내)
+     * 유효기간 임박 회원 수 조회 (7일 이내)
      */
     public function getExpiringSoonCount($agencyId = null)
     {
         $today = date('Y-m-d');
-        $sevenDaysLater = date('Y-m-d', strtotime('+7 days'));
+        $weekLater = date('Y-m-d', strtotime('+7 days'));
         
         $builder = $this->where('expiry_date >=', $today)
-                        ->where('expiry_date <=', $sevenDaysLater);
+                        ->where('expiry_date <=', $weekLater)
+                        ->where('status', 1);
         
         if ($agencyId) {
             $builder->where('agency_id', $agencyId);
@@ -91,6 +93,20 @@ class UserModel extends Model
         }
         
         return $builder->limit($limit)->findAll();
+    }
+
+    /**
+     * 전화번호 중복 체크 (전체 대리점)
+     */
+    public function isPhoneExists($phoneNumber, $excludeUserId = null)
+    {
+        $builder = $this->where('phone_number', $phoneNumber);
+        
+        if ($excludeUserId) {
+            $builder->where('id !=', $excludeUserId);
+        }
+        
+        return $builder->countAllResults() > 0;
     }
 
     /**

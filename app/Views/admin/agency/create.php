@@ -23,7 +23,7 @@
 
                         <div class="mb-3">
                             <label for="phone_number" class="form-label">전화번호 <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" id="phone_number" placeholder="010-1234-5678" required>
+                            <input type="tel" class="form-control" id="phone_number" placeholder="01012345678" required>
                         </div>
 
                         <div class="alert alert-info">

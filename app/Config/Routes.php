@@ -60,7 +60,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->put('users/(:num)', 'UserController::modify/$1');
     $routes->delete('users/(:num)', 'UserController::delete/$1');
     $routes->post('users/(:num)/extend', 'UserController::extend/$1');
-    $routes->put('users/(:num)/status', 'UserController::updateStatus/$1');
+    $routes->post('users/(:num)/status', 'UserController::changeStatus/$1');
     $routes->get('users/(:num)/history', 'UserController::getHistory/$1');
     $routes->get('users/(:num)/logs', 'UserController::getLogs/$1');
     

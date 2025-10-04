@@ -16,10 +16,6 @@ class UserController extends BaseApiController
         $this->historyModel = new UserHistoryModel();
     }
 
-    /**
-     * 사용자 목록 조회
-     * GET /api/v1/users
-     */
     public function index()
     {
         $data = $this->getRequestData();
@@ -29,6 +25,7 @@ class UserController extends BaseApiController
         $limit = (int)($data['limit'] ?? 20);
         $search = $data['search'] ?? '';
         $status = $data['status'] ?? '';
+        $appService = $data['app_service'] ?? ''; // 추가
         
         $userModel = new \App\Models\UserModel();
         
@@ -43,6 +40,10 @@ class UserController extends BaseApiController
         
         if ($status !== '') {
             $builder->where('status', $status);
+        }
+        
+        if ($appService !== '') {
+            $builder->where('app_service', $appService);
         }
         
         $total = $builder->countAllResults(false);
@@ -132,18 +133,23 @@ class UserController extends BaseApiController
                             ->orderBy('created_at', 'DESC')
                             ->first();
 
-        return $this->successResponse([
+        $responseData = [
             'user_id' => $user['id'],
             'name' => $user['name'],
             'phone_number' => $user['phone_number'],
             'status' => $user['status'],
             'expiry_date' => date('Y-m-d', strtotime($user['expiry_date'])),
-            'is_franchise' => $user['is_franchise'],
             'notice' => [
                 'title' => $notice['title'] ?? '',
                 'content' => $notice['content'] ?? ''
             ]
-        ], '로그인 성공');
+        ];
+
+        if ($user['app_service'] == 'normal') {
+            $responseData['is_franchise'] = $user['is_franchise'];
+        }
+
+        return $this->successResponse($responseData, '로그인 성공');
     }
 
     public function logout()
@@ -178,19 +184,29 @@ class UserController extends BaseApiController
             return $this->fail('이름과 전화번호를 입력하세요.', 400);
         }
         
+        // 전화번호에서 숫자만 추출
+        $phoneNumber = preg_replace('/[^0-9]/', '', $data['phone_number']);
+        
+        if (strlen($phoneNumber) < 10 || strlen($phoneNumber) > 11) {
+            return $this->fail('올바른 전화번호를 입력하세요.', 400);
+        }
+        
         $userModel = new \App\Models\UserModel();
         
-        if ($userModel->isDuplicatePhone($data['phone_number'], $agencyId)) {
-            return $this->fail('이미 등록된 전화번호입니다.', 400);
+        // 전체 대리점에서 전화번호 중복 체크
+        if ($userModel->isPhoneExists($phoneNumber)) {
+            return $this->fail('다른 대리점에 가입된 번호입니다.', 400);
         }
         
         $insertData = [
             'agency_id' => $agencyId,
             'name' => $data['name'],
-            'phone_number' => $data['phone_number'],
-            'is_franchise' => $data['is_franchise'] ?? 0,
+            'phone_number' => $phoneNumber, // 숫자만 저장
+            'app_service' => $data['app_service'] ?? 'normal',
+            'signup_date' => $data['signup_date'] ?? null,
+            'is_franchise' => $data['is_franchise'] ?? null,
             'registration_date' => date('Y-m-d'),
-            'expiry_date' => null, // null로 저장
+            'expiry_date' => null,
             'status' => $data['status'] ?? 1
         ];
         
@@ -216,16 +232,37 @@ class UserController extends BaseApiController
             return $this->fail('사용자를 찾을 수 없습니다.', 404);
         }
         
-        // 전화번호 변경 시 중복 체크
-        if (isset($data['phone_number']) && $data['phone_number'] != $user['phone_number']) {
-            if ($userModel->isDuplicatePhone($data['phone_number'], $agencyId, $id)) {
-                return $this->fail('이미 등록된 전화번호입니다.', 400);
+        $updateData = [];
+        
+        // 전화번호 변경 시
+        if (isset($data['phone_number'])) {
+            // 숫자만 추출
+            $phoneNumber = preg_replace('/[^0-9]/', '', $data['phone_number']);
+            
+            if (strlen($phoneNumber) < 10 || strlen($phoneNumber) > 11) {
+                return $this->fail('올바른 전화번호를 입력하세요.', 400);
             }
+            
+            // 전화번호가 변경되었을 때만 중복 체크
+            if ($phoneNumber != $user['phone_number']) {
+                // 전체 대리점에서 중복 체크
+                if ($userModel->isPhoneExists($phoneNumber, $id)) {
+                    return $this->fail('다른 대리점에 가입된 번호입니다.', 400);
+                }
+            }
+            
+            $updateData['phone_number'] = $phoneNumber;
         }
         
-        $updateData = [];
         if (isset($data['name'])) $updateData['name'] = $data['name'];
-        if (isset($data['phone_number'])) $updateData['phone_number'] = $data['phone_number'];
+        if (isset($data['app_service'])) {
+            $updateData['app_service'] = $data['app_service'];
+            // 벤티로 변경 시 is_franchise null
+            if ($data['app_service'] == 'venti') {
+                $updateData['is_franchise'] = null;
+            }
+        }
+        if (isset($data['signup_date'])) $updateData['signup_date'] = $data['signup_date'];
         if (isset($data['is_franchise'])) $updateData['is_franchise'] = $data['is_franchise'];
         
         if ($userModel->update($id, $updateData)) {
@@ -237,7 +274,6 @@ class UserController extends BaseApiController
         
         return $this->fail('수정에 실패했습니다.', 500);
     }
-
     public function delete($id = null)
     {
         $agencyId = session()->get('agency_id');
@@ -261,43 +297,36 @@ class UserController extends BaseApiController
         return $this->errorResponse('사용자 삭제 실패', 500);
     }
 
-    public function extend($id = null)
+    /**
+     * 사용자 유효기간 연장/수정
+     * POST /api/v1/users/{id}/extend
+     */
+    public function extend($id)
     {
+        $data = $this->getRequestData();
         $agencyId = session()->get('agency_id');
         
-        if (!$agencyId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($id);
+        
+        if (!$user || $user['agency_id'] != $agencyId) {
+            return $this->fail('사용자를 찾을 수 없습니다.', 404);
         }
-
-        $user = $this->userModel
-            ->where('agency_id', $agencyId)
-            ->find($id);
-
-        if (!$user) {
-            return $this->errorResponse('사용자를 찾을 수 없습니다', 404);
+        
+        if (!isset($data['expiry_date'])) {
+            return $this->fail('유효기간 값이 필요합니다.', 400);
         }
-
-        $data = $this->getRequestData();
-        $newExpiryDate = $data['expiry_date'] ?? null;
-
-        if (!$newExpiryDate) {
-            return $this->errorResponse('만료일을 입력하세요', 400);
-        }
-
-        if ($this->userModel->update($id, ['expiry_date' => $newExpiryDate])) {
-            $this->historyModel->insert([
-                'user_id' => $id,
-                'action_type' => 'renewal',
-                'previous_expiry_date' => $user['expiry_date'],
-                'new_expiry_date' => $newExpiryDate,
-                'created_by' => session()->get('admin_id')
+        
+        if ($userModel->update($id, ['expiry_date' => $data['expiry_date']])) {
+            return $this->respond([
+                'status' => 'success',
+                'message' => '유효기간이 변경되었습니다.'
             ]);
-
-            return $this->successResponse(null, '기간 연장 성공');
         }
-
-        return $this->errorResponse('기간 연장 실패', 500);
+        
+        return $this->fail('유효기간 변경에 실패했습니다.', 500);
     }
+
 
     public function updateStatus($id = null)
     {
@@ -378,4 +407,36 @@ class UserController extends BaseApiController
     //         ]
     //     ]);
     // }
+
+    /**
+     * 사용자 상태 변경
+     * POST /api/v1/users/{id}/status
+     */
+    public function changeStatus($id)
+    {
+        $data = $this->getRequestData();
+        $agencyId = session()->get('agency_id');
+        
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($id);
+        
+        if (!$user || $user['agency_id'] != $agencyId) {
+            return $this->fail('사용자를 찾을 수 없습니다.', 404);
+        }
+        
+        if (!isset($data['status'])) {
+            return $this->fail('상태 값이 필요합니다.', 400);
+        }
+        
+        if ($userModel->update($id, ['status' => $data['status']])) {
+            return $this->respond([
+                'status' => 'success',
+                'message' => '상태가 변경되었습니다.'
+            ]);
+        }
+        
+        return $this->fail('상태 변경에 실패했습니다.', 500);
+    }
+
+
 }

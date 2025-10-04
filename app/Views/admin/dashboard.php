@@ -75,12 +75,12 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">
-                                만료 임박
+                                유효기간 임박
                             </div>
                             <div class="h5 mb-0 fw-bold" id="expiringSoon">-</div>
                         </div>
                         <div>
-                            <i class="bi bi-exclamation-triangle fs-2 text-muted"></i>
+                            <i class="bi bi-clock-history fs-2 text-muted"></i>
                         </div>
                     </div>
                 </div>

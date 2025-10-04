@@ -27,6 +27,13 @@
                     </select>
                 </div>
                 <div class="col-md-2">
+                    <select class="form-select" id="serviceFilter">
+                        <option value="">전체 서비스</option>
+                        <option value="normal">일반</option>
+                        <option value="venti">벤티</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <button class="btn btn-primary w-100" onclick="loadUsers(1)">검색</button>
                 </div>
             </div>
@@ -43,8 +50,9 @@
                             <th>ID</th>
                             <th>이름</th>
                             <th>전화번호</th>
-                            <th>등록일</th>
-                            <th>만료일</th>
+                            <th>서비스타입</th>
+                            <th>가입날짜</th>
+                            <th>유효기간</th>
                             <th>상태</th>
                             <th>관리</th>
                         </tr>
@@ -83,10 +91,10 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <strong>작동방식:</strong> <span id="modal_franchise"></span>
+                        <strong>서비스타입:</strong> <span id="modal_service"></span>
                     </div>
                     <div class="col-md-6">
-                        <strong>등록일:</strong> <span id="modal_reg_date"></span>
+                        <strong>작동방식:</strong> <span id="modal_franchise"></span>
                     </div>
                 </div>
 
@@ -107,6 +115,19 @@
                             <input type="text" class="form-control" id="edit_phone">
                         </div>
                         <div class="mb-3">
+                            <label class="form-label">서비스타입</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit_app_service" id="edit_normalService" value="normal">
+                                    <label class="form-check-label" for="edit_normalService">일반</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit_app_service" id="edit_vantiService" value="venti">
+                                    <label class="form-check-label" for="edit_vantiService">벤티</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="edit_franchiseSection">
                             <label class="form-label">작동방식</label>
                             <div>
                                 <div class="form-check form-check-inline">
@@ -120,6 +141,23 @@
                             </div>
                         </div>
                         <button class="btn btn-primary btn-sm w-100" onclick="updateUserInfo()">정보 수정</button>
+                    </div>
+                </div>
+
+                <!-- 가입일 수정 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">가입일 수정</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <input type="date" class="form-control" id="modal_signup_date">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary btn-sm w-100" onclick="updateSignupDate()">수정</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -138,10 +176,10 @@
                     </div>
                 </div>
 
-                <!-- 만료일 수정 -->
+                <!-- 유효기간 수정 -->
                 <div class="card mb-3">
                     <div class="card-header">
-                        <h6 class="mb-0">만료일 수정</h6>
+                        <h6 class="mb-0">유효기간 수정</h6>
                     </div>
                     <div class="card-body">
                         <div class="row g-2">
@@ -184,21 +222,24 @@
         loadUsers(1);
     });
 
-    function loadUsers(page) {
+    function loadUsers(page = 1) {
         currentPage = page;
-        const search = $('#searchKeyword').val();
+        const search = $('#searchInput').val();
         const status = $('#statusFilter').val();
+        const service = $('#serviceFilter').val(); // 추가
         
         api.get('/users', {
             page: page,
             limit: 20,
             search: search,
-            status: status
+            status: status,
+            app_service: service // 추가
         })
         .done(function(response) {
             if (response.status === 'success') {
-                renderUsersTable(response.data.users);
-                renderPagination(response.data.pagination);
+                const data = response.data;
+                renderUsersTable(data.users);
+                renderPagination(data.pagination);
             }
         })
         .fail(handleError);
@@ -208,20 +249,21 @@
         let html = '';
         
         if (users.length === 0) {
-            html = '<tr><td colspan="8" class="text-center">등록된 사용자가 없습니다.</td></tr>';
+            html = '<tr><td colspan="8" class="text-center py-4">등록된 사용자가 없습니다.</td></tr>';
         } else {
             users.forEach(function(user) {
                 html += `
                     <tr>
                         <td>${user.id}</td>
                         <td>${escapeHtml(user.name)}</td>
-                        <td>${escapeHtml(user.phone_number)}</td>
-                        <td>${user.registration_date}</td>
-                        <td>${user.expiry_date}</td>
+                        <td>${formatPhoneNumber(user.phone_number)}</td>
+                        <td>${getServiceTypeBadge(user.app_service)}</td>
+                        <td>${user.signup_date || '-'}</td>
+                        <td>${user.expiry_date ? user.expiry_date.split(' ')[0] : '-'}</td>
                         <td>${getStatusBadge(user.status)}</td>
                         <td>
                             <button class="btn btn-sm btn-warning" onclick="openEditModal(${user.id})">
-                                <i class="bi bi-pencil"></i> 수정
+                                <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
                                 <i class="bi bi-trash"></i>
@@ -248,6 +290,34 @@
         $('#pagination').html(html);
     }
 
+    function getServiceTypeBadge(appService) {
+        const badges = {
+            'normal': '<span class="badge bg-primary">일반</span>',
+            'venti': '<span class="badge bg-info">벤티</span>'
+        };
+        return badges[appService] || '<span class="badge bg-secondary">' + (appService || '-') + '</span>';
+    }
+
+    function formatPhoneNumber(phone) {
+        if (!phone) return '-';
+        // 010-1234-5678 형식으로 변환
+        if (phone.length === 11) {
+            return phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+        } else if (phone.length === 10) {
+            return phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+        }
+        return phone;
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            1: '<span class="badge bg-success">사용가능</span>',
+            2: '<span class="badge bg-warning">테스터</span>',
+            3: '<span class="badge bg-danger">사용불가</span>'
+        };
+        return badges[status] || '<span class="badge bg-secondary">알수없음</span>';
+    }
+
     function getStatusBadge(status) {
         const badges = {
             1: '<span class="badge bg-success">사용가능</span>',
@@ -266,18 +336,27 @@
                     const user = response.data;
                     
                     $('#modal_name').text(user.name);
-                    $('#modal_phone').text(user.phone_number);
-                    $('#modal_franchise').text(user.is_franchise == 1 ? '가맹' : '비가맹');
-                    $('#modal_reg_date').text(user.registration_date);
+                    $('#modal_phone').text(formatPhoneNumber(user.phone_number));
+                    $('#modal_service').text(user.app_service == 'normal' ? '일반' : user.app_service == 'venti' ? '벤티' : '-');
+                    $('#modal_franchise').text(user.is_franchise == 1 ? '가맹' : user.is_franchise == 0 ? '비가맹' : '-');
                     $('#modal_status').val(user.status);
                     
-                    // datetime에서 날짜만 추출 (YYYY-MM-DD)
                     const expiryDate = user.expiry_date ? user.expiry_date.split(' ')[0] : '';
                     $('#modal_expiry_date').val(expiryDate);
                     
+                    const signupDate = user.signup_date || '';
+                    $('#modal_signup_date').val(signupDate);
+                    
                     $('#edit_name').val(user.name);
                     $('#edit_phone').val(user.phone_number);
-                    $(`input[name="edit_is_franchise"][value="${user.is_franchise}"]`).prop('checked', true);
+                    $(`input[name="edit_app_service"][value="${user.app_service}"]`).prop('checked', true);
+                    
+                    if (user.app_service == 'normal' && user.is_franchise !== null) {
+                        $(`input[name="edit_is_franchise"][value="${user.is_franchise}"]`).prop('checked', true);
+                        $('#edit_franchiseSection').show();
+                    } else {
+                        $('#edit_franchiseSection').hide();
+                    }
                     
                     new bootstrap.Modal(document.getElementById('editUserModal')).show();
                 }
@@ -285,12 +364,27 @@
             .fail(handleError);
     }
 
+    // 서비스타입 변경 시 작동방식 표시/숨김
+    $(document).on('change', 'input[name="edit_app_service"]', function() {
+        if ($(this).val() == 'normal') {
+            $('#edit_franchiseSection').show();
+        } else {
+            $('#edit_franchiseSection').hide();
+        }
+    });
+
     function updateUserInfo() {
+        const appService = $('input[name="edit_app_service"]:checked').val();
+        
         const data = {
             name: $('#edit_name').val().trim(),
             phone_number: $('#edit_phone').val().trim(),
-            is_franchise: $('input[name="edit_is_franchise"]:checked').val()
+            app_service: appService
         };
+        
+        if (appService == 'normal') {
+            data.is_franchise = $('input[name="edit_is_franchise"]:checked').val();
+        }
         
         if (!confirm('정보를 수정하시겠습니까?')) return;
         
@@ -299,7 +393,14 @@
                 if (response.status === 'success') {
                     alert('수정되었습니다.');
                     loadUsers(currentPage);
-                    openEditModal(currentUserId);
+                    
+                    $('#editUserModal').modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('padding-right', '');
+                    
+                    setTimeout(function() {
+                        openEditModal(currentUserId);
+                    }, 400);
                 }
             })
             .fail(function(xhr) {
@@ -311,24 +412,88 @@
             });
     }
 
-    function updateExpiryDate() {
-        const newDate = $('#modal_expiry_date').val();
+    function updateSignupDate() {
+        const signupDate = $('#modal_signup_date').val();
         
-        if (!newDate) {
-            alert('만료일을 선택하세요.');
+        if (!signupDate) {
+            alert('가입일을 선택하세요.');
             return;
         }
         
-        if (!confirm('만료일을 변경하시겠습니까?')) return;
+        if (!confirm('가입일을 변경하시겠습니까?')) return;
         
-        api.post('/users/' + currentUserId + '/extend', {
-            expiry_date: newDate
+        api.put('/users/' + currentUserId, {
+            signup_date: signupDate
         })
         .done(function(response) {
             if (response.status === 'success') {
-                alert('만료일이 변경되었습니다.');
+                alert('가입일이 변경되었습니다.');
                 loadUsers(currentPage);
-                openEditModal(currentUserId);
+                
+                $('#editUserModal').modal('hide');
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+                
+                setTimeout(function() {
+                    openEditModal(currentUserId);
+                }, 400);
+            }
+        })
+        .fail(handleError);
+    }
+
+    function updateStatus() {
+        const newStatus = $('#modal_status').val();
+        
+        if (!confirm('상태를 변경하시겠습니까?')) return;
+        
+        api.post('/users/' + currentUserId + '/status', {
+            status: newStatus
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                alert('상태가 변경되었습니다.');
+                loadUsers(currentPage);
+                
+                $('#editUserModal').modal('hide');
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+                
+                setTimeout(function() {
+                    openEditModal(currentUserId);
+                }, 400);
+            }
+        })
+        .fail(handleError);
+    }
+
+    function updateExpiryDate() {
+        const expiryDate = $('#modal_expiry_date').val();
+        
+        if (!expiryDate) {
+            alert('유효기간을 선택하세요.');
+            return;
+        }
+        
+        if (!confirm('유효기간을 변경하시겠습니까?')) return;
+        
+        api.post('/users/' + currentUserId + '/extend', {
+            expiry_date: expiryDate
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                alert('유효기간이 변경되었습니다.');
+                loadUsers(currentPage);
+                
+                // 기존 모달과 백드롭 완전히 제거
+                $('#editUserModal').modal('hide');
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+                
+                // 재오픈
+                setTimeout(function() {
+                    openEditModal(currentUserId);
+                }, 400);
             }
         })
         .fail(handleError);
