@@ -29,15 +29,15 @@ $role = $session->get('role');
             
             <?php if ($role == 99): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($active_menu ?? '') === 'agency' ? 'active' : '' ?>" 
-                href="/admin/agency">
-                    <i class="bi bi-building"></i> 대리점 관리
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link <?= ($active_menu ?? '') === 'settlement' ? 'active' : '' ?>" 
                    href="/admin/settlement">
                     <i class="bi bi-calculator"></i> 정산 관리
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($active_menu ?? '') === 'agency' ? 'active' : '' ?>" 
+                href="/admin/agency">
+                    <i class="bi bi-building"></i> 대리점 관리
                 </a>
             </li>
             <?php endif; ?>
