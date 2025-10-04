@@ -93,10 +93,9 @@ class UserController extends BaseApiController
             return $this->errorResponse('계정을 찾을 수 없습니다', 404);
         }
 
-        if (!in_array($user['status'], ['1','2'])) {
+        if (in_array($user['status'], ['2'])) {
             $statusMessage = [
-                0 => '계정 미인증',
-                3 => '계정 정지'
+                3 => '사용불가'
             ];
             return $this->errorResponse('사용 불가능한 계정입니다. 상태: ' . ($statusMessage[$user['status']] ?? '알 수 없음'), 403);
         }
@@ -119,7 +118,7 @@ class UserController extends BaseApiController
 
         // login_at과 app_version 업데이트
         $updateData = [
-            'login_at' => date('Y-m-d H:i:s') // DATETIME 형식
+            'login_at' => date('Y-m-d H:i:s')
         ];
         
         if ($appVersion) {
@@ -128,13 +127,22 @@ class UserController extends BaseApiController
 
         $this->userModel->update($user['id'], $updateData);
 
+        $noticeModel = new \App\Models\NoticeModel();
+        $notice = $noticeModel->where('is_pinned', 1)
+                            ->orderBy('created_at', 'DESC')
+                            ->first();
+
         return $this->successResponse([
             'user_id' => $user['id'],
             'name' => $user['name'],
             'phone_number' => $user['phone_number'],
             'status' => $user['status'],
             'expiry_date' => date('Y-m-d', strtotime($user['expiry_date'])),
-            'is_franchise' => $user['is_franchise']
+            'is_franchise' => $user['is_franchise'],
+            'notice' => [
+                'title' => $notice['title'] ?? '',
+                'content' => $notice['content'] ?? ''
+            ]
         ], '로그인 성공');
     }
 
