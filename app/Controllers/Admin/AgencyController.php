@@ -4,7 +4,7 @@ namespace App\Controllers\Admin;
 
 class AgencyController extends BaseController
 {
-    public function info()
+    public function index()
     {
         $auth = $this->checkAuth();
         if ($auth !== true) return $auth;
@@ -12,8 +12,8 @@ class AgencyController extends BaseController
         $roleCheck = $this->checkRole(99);
         if ($roleCheck !== true) return $roleCheck;
         
-        return view('admin/agency/info', [
-            'title' => '대리점 정보',
+        return view('admin/agency/index', [
+            'title' => '대리점 관리',
             'active_menu' => 'agency'
         ]);
     }

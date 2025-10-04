@@ -18,8 +18,8 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($rout
     $routes->get('users', 'UserController::index');
     $routes->get('users/create', 'UserController::create');
     
-    // 대리점 관리
-    $routes->get('agency/info', 'AgencyController::info');
+    // 대리점 관리 (슈퍼 관리자만)
+    $routes->get('agency', 'AgencyController::index');
     $routes->get('agency/create', 'AgencyController::create');
 
     // 공지사항
