@@ -1,5 +1,4 @@
 <?php
-// app/Controllers/Api/NoticeController.php
 
 namespace App\Controllers\Api;
 
@@ -14,19 +13,30 @@ class NoticeController extends BaseApiController
         $this->noticeModel = new NoticeModel();
     }
 
-    // 공지사항 목록
+    // 공지사항 목록 (대리점별)
     public function index()
     {
+        $agencyId = session()->get('agency_id');
+        
+        if (!$agencyId) {
+            return $this->errorResponse('대리점 정보가 없습니다', 400);
+        }
+
         $page = (int) ($_GET['page'] ?? 1);
         $limit = (int) ($_GET['limit'] ?? 20);
 
-        // 고정 공지와 일반 공지 분리
+        // 해당 대리점의 고정 공지
         $pinnedNotice = $this->noticeModel
+            ->where('agency_id', $agencyId)
             ->where('is_pinned', 1)
             ->orderBy('created_at', 'DESC')
             ->first();
 
-        $builder = $this->noticeModel->where('is_pinned', 0);
+        // 해당 대리점의 일반 공지
+        $builder = $this->noticeModel
+            ->where('agency_id', $agencyId)
+            ->where('is_pinned', 0);
+        
         $total = $builder->countAllResults(false);
         $notices = $builder->orderBy('created_at', 'DESC')
             ->paginate($limit, 'default', $page);
@@ -46,9 +56,10 @@ class NoticeController extends BaseApiController
     // 공지사항 상세
     public function show($id = null)
     {
+        $agencyId = session()->get('agency_id');
         $notice = $this->noticeModel->find($id);
 
-        if (!$notice) {
+        if (!$notice || $notice['agency_id'] != $agencyId) {
             return $this->errorResponse('공지사항을 찾을 수 없습니다', 404);
         }
 
@@ -59,9 +70,14 @@ class NoticeController extends BaseApiController
     public function create()
     {
         $adminId = session()->get('admin_id');
+        $agencyId = session()->get('agency_id');
         
         if (!$adminId) {
             return $this->errorResponse('로그인이 필요합니다', 401);
+        }
+
+        if (!$agencyId) {
+            return $this->errorResponse('대리점 정보가 없습니다', 400);
         }
 
         $data = $this->getRequestData();
@@ -71,15 +87,20 @@ class NoticeController extends BaseApiController
         }
 
         $insertData = [
+            'agency_id' => $agencyId,
             'title' => $data['title'],
             'content' => $data['content'],
             'is_pinned' => $data['is_pinned'] ?? 0,
             'created_by' => $adminId
         ];
 
-        // 고정 공지로 등록하는 경우 기존 고정 해제
+        // 고정 공지로 등록하는 경우 해당 대리점의 기존 고정 해제
         if ($insertData['is_pinned'] == 1) {
-            $this->noticeModel->where('is_pinned', 1)->set('is_pinned', 0)->update();
+            $this->noticeModel
+                ->where('agency_id', $agencyId)
+                ->where('is_pinned', 1)
+                ->set('is_pinned', 0)
+                ->update();
         }
 
         $noticeId = $this->noticeModel->insert($insertData);
@@ -95,6 +116,7 @@ class NoticeController extends BaseApiController
     public function update($id = null)
     {
         $adminId = session()->get('admin_id');
+        $agencyId = session()->get('agency_id');
         
         if (!$adminId) {
             return $this->errorResponse('로그인이 필요합니다', 401);
@@ -102,7 +124,7 @@ class NoticeController extends BaseApiController
 
         $notice = $this->noticeModel->find($id);
 
-        if (!$notice) {
+        if (!$notice || $notice['agency_id'] != $agencyId) {
             return $this->errorResponse('공지사항을 찾을 수 없습니다', 404);
         }
 
@@ -118,9 +140,13 @@ class NoticeController extends BaseApiController
             'is_pinned' => $data['is_pinned'] ?? 0
         ];
 
-        // 고정 공지로 변경하는 경우 기존 고정 해제
+        // 고정 공지로 변경하는 경우 해당 대리점의 기존 고정 해제
         if ($updateData['is_pinned'] == 1 && $notice['is_pinned'] == 0) {
-            $this->noticeModel->where('is_pinned', 1)->set('is_pinned', 0)->update();
+            $this->noticeModel
+                ->where('agency_id', $agencyId)
+                ->where('is_pinned', 1)
+                ->set('is_pinned', 0)
+                ->update();
         }
 
         if ($this->noticeModel->update($id, $updateData)) {
@@ -134,6 +160,7 @@ class NoticeController extends BaseApiController
     public function delete($id = null)
     {
         $adminId = session()->get('admin_id');
+        $agencyId = session()->get('agency_id');
         
         if (!$adminId) {
             return $this->errorResponse('로그인이 필요합니다', 401);
@@ -141,7 +168,7 @@ class NoticeController extends BaseApiController
 
         $notice = $this->noticeModel->find($id);
 
-        if (!$notice) {
+        if (!$notice || $notice['agency_id'] != $agencyId) {
             return $this->errorResponse('공지사항을 찾을 수 없습니다', 404);
         }
 
@@ -156,6 +183,7 @@ class NoticeController extends BaseApiController
     public function togglePin($id = null)
     {
         $adminId = session()->get('admin_id');
+        $agencyId = session()->get('agency_id');
         
         if (!$adminId) {
             return $this->errorResponse('로그인이 필요합니다', 401);
@@ -163,15 +191,19 @@ class NoticeController extends BaseApiController
 
         $notice = $this->noticeModel->find($id);
 
-        if (!$notice) {
+        if (!$notice || $notice['agency_id'] != $agencyId) {
             return $this->errorResponse('공지사항을 찾을 수 없습니다', 404);
         }
 
         $newPinStatus = $notice['is_pinned'] == 1 ? 0 : 1;
 
-        // 고정으로 변경하는 경우 기존 고정 해제
+        // 고정으로 변경하는 경우 해당 대리점의 기존 고정 해제
         if ($newPinStatus == 1) {
-            $this->noticeModel->where('is_pinned', 1)->set('is_pinned', 0)->update();
+            $this->noticeModel
+                ->where('agency_id', $agencyId)
+                ->where('is_pinned', 1)
+                ->set('is_pinned', 0)
+                ->update();
         }
 
         if ($this->noticeModel->update($id, ['is_pinned' => $newPinStatus])) {

@@ -113,7 +113,7 @@ class UserController extends BaseApiController
                 return $this->errorResponse('만료된 계정입니다', 403);
             }
         }
-        
+
         // 세션 저장
         session()->set([
             'user_id' => $user['id'],
@@ -133,10 +133,9 @@ class UserController extends BaseApiController
 
         $this->userModel->update($user['id'], $updateData);
 
+        // 해당 대리점의 고정 공지사항 조회
         $noticeModel = new \App\Models\NoticeModel();
-        $notice = $noticeModel->where('is_pinned', 1)
-                            ->orderBy('created_at', 'DESC')
-                            ->first();
+        $notice = $noticeModel->getActiveNotice($user['agency_id']);
 
         $responseData = [
             'user_id' => $user['id'],

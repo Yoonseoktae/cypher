@@ -25,14 +25,21 @@ class BaseController extends AppBaseController
     protected function checkRole($requiredRole)
     {
         $userRole = $this->session->get('role');
+        
         if ($userRole == 99) {
             return true;
         }
         
-        if ($userRole != $requiredRole) {
-            return redirect()->to('/admin/dashboard')->with('error', '접근 권한이 없습니다.');
+        if (is_array($requiredRole)) {
+            if (in_array($userRole, $requiredRole)) {
+                return true;
+            }
+        } else {
+            if ($userRole == $requiredRole) {
+                return true;
+            }
         }
         
-        return true;
+        return redirect()->to('/admin/dashboard')->with('error', '접근 권한이 없습니다.');
     }
 }

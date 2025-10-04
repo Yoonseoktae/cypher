@@ -157,10 +157,6 @@
         location.href = `/admin/notices/${id}`;
     }
 
-    function editNotice(id) {
-        location.href = `/admin/notices/${id}/edit`;
-    }
-
     function deleteNotice(id) {
         if (confirm('정말 삭제하시겠습니까?')) {
             api.delete('/notices/' + id)
