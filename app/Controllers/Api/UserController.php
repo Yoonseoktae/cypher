@@ -136,17 +136,20 @@ class UserController extends BaseApiController
         // 해당 대리점의 고정 공지사항 조회
         $noticeModel = new \App\Models\NoticeModel();
         $notice = $noticeModel->getActiveNotice($user['agency_id']);
-
+        $noticeData = null;
+        if (!empty($notice)) {
+            $noticeData = [
+                'title' => $notice['title'] ?? '',
+                'content' => $notice['content'] ?? ''
+            ];
+        }
         $responseData = [
             'user_id' => $user['id'],
             'name' => $user['name'],
             'phone_number' => $user['phone_number'],
             'status' => $user['status'],
             'expiry_date' => date('Y-m-d', strtotime($user['expiry_date'])),
-            'notice' => [
-                'title' => $notice['title'] ?? '',
-                'content' => $notice['content'] ?? ''
-            ]
+            'notice' => $noticeData
         ];
 
         if ($user['app_service'] == 'normal') {
