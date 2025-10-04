@@ -27,9 +27,26 @@ class NoticeController extends BaseController
         $roleCheck = $this->checkRole([1, 99]);
         if ($roleCheck !== true) return $roleCheck;
         
-        return view('admin/notices/create', [
+        return view('admin/notices/form', [
             'title' => '공지사항 등록',
-            'active_menu' => 'notices'
+            'active_menu' => 'notices',
+            'mode' => 'create'
         ]);
+    }
+
+    public function edit($id)
+    {
+        if (!session()->get('logged_in')) {
+            return redirect()->to('/admin/login');
+        }
+        
+        $data = [
+            'title' => '공지사항 수정',
+            'active_menu' => 'notices',
+            'mode' => 'edit',
+            'notice_id' => $id
+        ];
+        
+        return view('admin/notices/form', $data);
     }
 }

@@ -25,6 +25,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($rout
     // 공지사항
     $routes->get('notices', 'NoticeController::index');
     $routes->get('notices/create', 'NoticeController::create');
+    $routes->get('notices/(:num)/edit', 'NoticeController::edit/$1');
 
     // 정산 관리
     $routes->get('settlement', 'SettlementController::index');
