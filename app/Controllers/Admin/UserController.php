@@ -9,7 +9,7 @@ class UserController extends BaseController
         $auth = $this->checkAuth();
         if ($auth !== true) return $auth;
         
-        $roleCheck = $this->checkRole(10);
+        $roleCheck = $this->checkRole(1);
         if ($roleCheck !== true) return $roleCheck;
         
         return view('admin/users/index', [
@@ -23,7 +23,7 @@ class UserController extends BaseController
         $auth = $this->checkAuth();
         if ($auth !== true) return $auth;
         
-        $roleCheck = $this->checkRole(10);
+        $roleCheck = $this->checkRole(1);
         if ($roleCheck !== true) return $roleCheck;
         
         return view('admin/users/create', [
