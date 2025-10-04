@@ -105,10 +105,15 @@ class UserController extends BaseApiController
             return $this->errorResponse('만료일이 지정되지 않았습니다', 400);
         }
 
-        if ($user['expiry_date'] !== null && strtotime($user['expiry_date']) < time()) {
-            return $this->errorResponse('만료된 계정입니다', 403);
+        if ($user['expiry_date'] !== null) {
+            $expiryDate = date('Y-m-d', strtotime($user['expiry_date']));
+            $today = date('Y-m-d');
+            
+            if ($expiryDate < $today) {
+                return $this->errorResponse('만료된 계정입니다', 403);
+            }
         }
-
+        
         // 세션 저장
         session()->set([
             'user_id' => $user['id'],

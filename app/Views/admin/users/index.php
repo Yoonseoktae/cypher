@@ -336,7 +336,7 @@
                     const user = response.data;
                     
                     $('#modal_name').text(user.name);
-                    $('#modal_phone').text(formatPhoneNumber(user.phone_number));
+                    $('#modal_phone').text(user.phone_number);
                     $('#modal_service').text(user.app_service == 'normal' ? '일반' : user.app_service == 'venti' ? '벤티' : '-');
                     $('#modal_franchise').text(user.is_franchise == 1 ? '가맹' : user.is_franchise == 0 ? '비가맹' : '-');
                     $('#modal_status').val(user.status);
@@ -515,7 +515,7 @@
                         type: 'text/plain;charset=utf-8;' 
                     });
                     const link = document.createElement('a');
-                    const filename = `${userName}_${phoneNumber}_최근7일_로그.txt`;
+                    const filename = `${userName}_${phoneNumber}_log.txt`;
                     
                     link.href = URL.createObjectURL(blob);
                     link.download = filename;

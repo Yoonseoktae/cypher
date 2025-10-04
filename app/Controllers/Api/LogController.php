@@ -55,50 +55,6 @@ class LogController extends BaseApiController
     }
 
     /**
-     * 로그 저장 API
-     * POST /api/v1/logs
-     */
-    public function create_shell()
-    {
-        $data = $this->getRequestData();
-
-        // 필수 필드 검증
-        if (!isset($data['content']) || empty($data['content'])) {
-            return $this->fail('로그 데이터가 필요합니다.', 400);
-        }
-
-        // 선택적 필드
-        $phoneNumber = $data['phone_number'] ?? null;
-        $appVersion = $data['app_version'] ?? null;
-        $appService = $data['app_service'] ?? null;
-        
-        $logData = $data['content'];
-
-        // 날짜별 파일명 생성
-        $date = date('Y-m-d');
-        $filename = "{$date}_{$appService}.log";
-        $filepath = $this->logPath . $filename;
-
-        // 로그 내용 포맷
-        $timestamp = date('Y-m-d H:i:s');
-        $logEntry = "[{$timestamp}] [USER:{$phoneNumber}] [APPVER:{$appVersion}] {$logData}" . PHP_EOL;
-
-        // 파일에 추가
-        if (file_put_contents($filepath, $logEntry, FILE_APPEND | LOCK_EX) === false) {
-            return $this->fail('로그 저장에 실패했습니다.', 500);
-        }
-
-        // 오래된 로그 삭제
-        $this->cleanOldLogs();
-
-        return $this->respondCreated([
-            'status' => 'success',
-            'message' => '로그가 저장되었습니다.',
-            'file' => $filename
-        ]);
-    }
-
-    /**
      * 30일 이상 지난 로그 파일 삭제
      */
     private function cleanOldLogs()
@@ -264,20 +220,18 @@ class LogController extends BaseApiController
         }
         
         $phoneNumber = $data['phone_number'];
-        $userId = $data['user_id'] ?? 'unknown'; // user_id 추가
-        $appService = $data['app_service'] ?? 'general';
+        $userId = $data['user_id'] ?? 'unknown';
         $content = $data['content'];
         
-        $yearMonth = date('Ym');
         $monthDay = date('md');
-        $logDir = WRITEPATH . "logs/users/{$yearMonth}/";
+        $logDir = WRITEPATH . "logs/users/";
         
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);
         }
         
-        // 파일명: {app_service}_{user_id}_{phone_number}_{월일}.txt
-        $filename = "{$appService}_{$userId}_{$phoneNumber}_{$monthDay}.txt";
+        // 파일명: {userId}_{phoneNumber}_{월일}.txt
+        $filename = "{$userId}_{$phoneNumber}_{$monthDay}.txt";
         $filepath = $logDir . $filename;
         
         $logEntry = $content . PHP_EOL;
@@ -293,31 +247,37 @@ class LogController extends BaseApiController
         ]);
     }
 
-    /**
-     * 사용자별 최근 7일 로그 다운로드
-     * GET /api/v1/logs/download/{user_id}/{phone_number}
-     */
     public function downloadUserLog($userId, $phoneNumber)
     {
+        // 디버깅: 파라미터 확인
+        log_message('debug', "Download Log - userId: {$userId}, phoneNumber: {$phoneNumber}");
+        
         $endDate = date('Y-m-d');
         $startDate = date('Y-m-d', strtotime('-7 days'));
         
         $start = new \DateTime($startDate);
         $end = new \DateTime($endDate);
         $allContent = '';
+        $foundFiles = [];
         
         while ($start <= $end) {
-            $yearMonth = $start->format('Ym');
             $monthDay = $start->format('md');
-            $logDir = WRITEPATH . "logs/users/{$yearMonth}/";
+            $logDir = WRITEPATH . "logs/users/";
             
-            // user_id와 phone_number로 파일 찾기
-            $pattern = $logDir . "*_{$userId}_{$phoneNumber}_{$monthDay}.txt";
-            $files = glob($pattern);
+            if (!is_dir($logDir)) {
+                $start->modify('+1 day');
+                continue;
+            }
             
-            foreach ($files as $file) {
-                if (file_exists($file)) {
-                    $allContent .= file_get_contents($file);
+            // 파일명 생성
+            $filename = "{$userId}_{$phoneNumber}_{$monthDay}.txt";
+            $filepath = $logDir . $filename;
+            
+            if (file_exists($filepath)) {
+                $foundFiles[] = $filepath;
+                $content = file_get_contents($filepath);
+                if ($content !== false) {
+                    $allContent .= $content;
                 }
             }
             
@@ -328,14 +288,19 @@ class LogController extends BaseApiController
             return $this->respond([
                 'status' => 'success',
                 'data' => '',
-                'message' => '로그가 없습니다.'
+                'message' => '로그가 없습니다.',
+                'debug' => [
+                    'searched_files' => $foundFiles,
+                    'user_id' => $userId,
+                    'phone_number' => $phoneNumber
+                ]
             ]);
         }
         
         return $this->respond([
             'status' => 'success',
             'data' => $allContent,
-            'filename' => "{$userId}_{$phoneNumber}_logs_recent7days.txt"
+            'filename' => "{$userId}_{$phoneNumber}_log.txt"
         ]);
     }
 }

@@ -81,9 +81,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->post('logs', 'LogController::create');
     $routes->post('logs/batch', 'LogController::batch');
     $routes->get('logs/files', 'LogController::files'); // 관리자용
-    $routes->get('logs/user/(:segment)', 'LogController::getUserLogs/$1');
-    
     $routes->post('logs/file', 'LogController::saveToFile');
+    
+    $routes->get('logs/user/(:segment)', 'LogController::getUserLogs/$1');
     $routes->get('logs/download/(:num)/(:segment)', 'LogController::downloadUserLog/$1/$2');
 
 });
