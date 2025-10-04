@@ -150,35 +150,27 @@ class AgencyController extends BaseApiController
     public function getDashboardStats()
     {
         $role = session()->get('role');
-        $agencyId = session()->get('agency_id'); // 여기서 에러
+        $agencyId = session()->get('agency_id');
         
-        // GET 파라미터 읽기
         $data = $this->getRequestData();
         $selectedAgencyId = $data['agency_id'] ?? null;
         
         $userModel = new \App\Models\UserModel();
         
-        // 슈퍼 관리자
         if ($role == 99) {
             if (!$selectedAgencyId) {
-                return $this->errorResponse('대리점을 선택해주세요.', 400);
+                return $this->fail('대리점을 선택해주세요.', 400);
             }
             $targetAgencyId = $selectedAgencyId;
         } else {
-            // 대리점 관리자는 자기 대리점만
-            if (!$agencyId) {
-                return $this->errorResponse('세션에 대리점 정보가 없습니다.', 401);
-            }
             $targetAgencyId = $agencyId;
         }
         
-        // 통계 조회
         $stats = [
             'total_users' => $userModel->where('agency_id', $targetAgencyId)->countAllResults(false),
             'active_users' => $userModel->where('agency_id', $targetAgencyId)->where('status', 1)->countAllResults(),
-            'expired_users' => $userModel->getExpiredCount($targetAgencyId),
+            'tester_users' => $userModel->getTesterCount($targetAgencyId), // 테스터로 변경
             'expiring_soon' => $userModel->getExpiringSoonCount($targetAgencyId),
-            'this_week_new' => $userModel->getThisWeekNewCount($targetAgencyId),
             'recent_users' => $userModel->getRecentUsers(10, $targetAgencyId)
         ];
         

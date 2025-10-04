@@ -57,12 +57,12 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="text-xs fw-bold text-info text-uppercase mb-1">
-                                이번주 신규
+                                테스터
                             </div>
-                            <div class="h5 mb-0 fw-bold" id="thisWeekNew">-</div>
+                            <div class="h5 mb-0 fw-bold" id="testerUsers">-</div>
                         </div>
                         <div>
-                            <i class="bi bi-person-plus fs-2 text-muted"></i>
+                            <i class="bi bi-bug fs-2 text-muted"></i>
                         </div>
                     </div>
                 </div>
@@ -167,7 +167,7 @@ function loadDashboardStats() {
                 const stats = response.data;
                 $('#totalUsers').text(stats.total_users);
                 $('#activeUsers').text(stats.active_users);
-                $('#thisWeekNew').text(stats.this_week_new);
+                $('#testerUsers').text(stats.tester_users); // 변경
                 $('#expiringSoon').text(stats.expiring_soon);
                 renderRecentUsers(stats.recent_users);
             }

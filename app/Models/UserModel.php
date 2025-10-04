@@ -107,4 +107,18 @@ class UserModel extends Model
         
         return $builder->countAllResults() > 0;
     }
+
+    /**
+     * 테스터 상태 회원 수 조회
+     */
+    public function getTesterCount($agencyId = null)
+    {
+        $builder = $this->where('status', 2); // 테스터 상태
+        
+        if ($agencyId) {
+            $builder->where('agency_id', $agencyId);
+        }
+        
+        return $builder->countAllResults();
+    }
 }
