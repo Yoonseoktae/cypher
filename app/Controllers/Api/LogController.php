@@ -250,4 +250,92 @@ class LogController extends BaseApiController
             'count' => count($logs)
         ]);
     }
+
+    /**
+     * 로그 파일 저장
+     * POST /api/v1/logs/file
+     */
+    public function saveToFile()
+    {
+        $data = $this->getRequestData();
+        
+        if (empty($data['phone_number']) || empty($data['content'])) {
+            return $this->fail('phone_number와 content가 필요합니다.', 400);
+        }
+        
+        $phoneNumber = $data['phone_number'];
+        $userId = $data['user_id'] ?? 'unknown'; // user_id 추가
+        $appService = $data['app_service'] ?? 'general';
+        $content = $data['content'];
+        
+        $yearMonth = date('Ym');
+        $monthDay = date('md');
+        $logDir = WRITEPATH . "logs/users/{$yearMonth}/";
+        
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+        
+        // 파일명: {app_service}_{user_id}_{phone_number}_{월일}.txt
+        $filename = "{$appService}_{$userId}_{$phoneNumber}_{$monthDay}.txt";
+        $filepath = $logDir . $filename;
+        
+        $logEntry = $content . PHP_EOL;
+        
+        if (file_put_contents($filepath, $logEntry, FILE_APPEND | LOCK_EX) === false) {
+            return $this->fail('로그 저장에 실패했습니다.', 500);
+        }
+        
+        return $this->respondCreated([
+            'status' => 'success',
+            'message' => '로그가 저장되었습니다.',
+            'file' => $filename
+        ]);
+    }
+
+    /**
+     * 사용자별 최근 7일 로그 다운로드
+     * GET /api/v1/logs/download/{user_id}/{phone_number}
+     */
+    public function downloadUserLog($userId, $phoneNumber)
+    {
+        $endDate = date('Y-m-d');
+        $startDate = date('Y-m-d', strtotime('-7 days'));
+        
+        $start = new \DateTime($startDate);
+        $end = new \DateTime($endDate);
+        $allContent = '';
+        
+        while ($start <= $end) {
+            $yearMonth = $start->format('Ym');
+            $monthDay = $start->format('md');
+            $logDir = WRITEPATH . "logs/users/{$yearMonth}/";
+            
+            // user_id와 phone_number로 파일 찾기
+            $pattern = $logDir . "*_{$userId}_{$phoneNumber}_{$monthDay}.txt";
+            $files = glob($pattern);
+            
+            foreach ($files as $file) {
+                if (file_exists($file)) {
+                    $allContent .= file_get_contents($file);
+                }
+            }
+            
+            $start->modify('+1 day');
+        }
+        
+        if (empty($allContent)) {
+            return $this->respond([
+                'status' => 'success',
+                'data' => '',
+                'message' => '로그가 없습니다.'
+            ]);
+        }
+        
+        return $this->respond([
+            'status' => 'success',
+            'data' => $allContent,
+            'filename' => "{$userId}_{$phoneNumber}_logs_recent7days.txt"
+        ]);
+    }
 }

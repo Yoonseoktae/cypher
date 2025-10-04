@@ -16,50 +16,51 @@ class UserController extends BaseApiController
         $this->historyModel = new UserHistoryModel();
     }
 
+    /**
+     * 사용자 목록 조회
+     * GET /api/v1/users
+     */
     public function index()
     {
-        $role = session()->get('role');
-        
-        if (!in_array($role, [10, 99])) {
-            return $this->fail('접근 권한이 없습니다.', 403);
-        }
-
+        $data = $this->getRequestData();
         $agencyId = session()->get('agency_id');
         
-        if (!$agencyId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
+        $page = (int)($data['page'] ?? 1);
+        $limit = (int)($data['limit'] ?? 20);
+        $search = $data['search'] ?? '';
+        $status = $data['status'] ?? '';
+        
+        $userModel = new \App\Models\UserModel();
+        
+        $builder = $userModel->where('agency_id', $agencyId);
+        
+        if (!empty($search)) {
+            $builder->groupStart()
+                    ->like('name', $search)
+                    ->orLike('phone_number', $search)
+                    ->groupEnd();
         }
         
-        $page = (int) ($_GET['page'] ?? 1);
-        $limit = (int) ($_GET['limit'] ?? 20);
-        $search = $_GET['search'] ?? null;
-        $status = $_GET['status'] ?? null;
-
-        $builder = $this->userModel->where('agency_id', $agencyId);
-
-        if ($search) {
-            $builder->groupStart()
-                ->like('name', $search)
-                ->orLike('phone_number', $search)
-                ->orLike('user_code', $search)
-                ->groupEnd();
-        }
-
-        if ($status) {
+        if ($status !== '') {
             $builder->where('status', $status);
         }
-
+        
         $total = $builder->countAllResults(false);
-        $users = $builder->orderBy('created_at', 'DESC')
-            ->paginate($limit, 'default', $page);
-
-        return $this->successResponse([
-            'users' => $users,
-            'pagination' => [
-                'current_page' => $page,
-                'total_pages' => ceil($total / $limit),
-                'total_items' => $total,
-                'per_page' => $limit
+        
+        $users = $builder->orderBy('registration_date', 'DESC')
+                        ->limit($limit, ($page - 1) * $limit)
+                        ->findAll();
+        
+        return $this->respond([
+            'status' => 'success',
+            'data' => [
+                'users' => $users,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => ceil($total / $limit),
+                    'total_records' => $total,
+                    'limit' => $limit
+                ]
             ]
         ]);
     }
@@ -143,23 +144,21 @@ class UserController extends BaseApiController
         return $this->successResponse(null, '로그아웃 성공');
     }
 
-    public function show($id = null)
+    public function detail($id)
     {
         $agencyId = session()->get('agency_id');
         
-        if (!$agencyId) {
-            return $this->errorResponse('로그인이 필요합니다', 401);
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($id);
+        
+        if (!$user || $user['agency_id'] != $agencyId) {
+            return $this->fail('사용자를 찾을 수 없습니다.', 404);
         }
-
-        $user = $this->userModel
-            ->where('agency_id', $agencyId)
-            ->find($id);
-
-        if (!$user) {
-            return $this->errorResponse('사용자를 찾을 수 없습니다', 404);
-        }
-
-        return $this->successResponse($user);
+        
+        return $this->respond([
+            'status' => 'success',
+            'data' => $user
+        ]);
     }
 
     public function create()
@@ -167,14 +166,12 @@ class UserController extends BaseApiController
         $data = $this->getRequestData();
         $agencyId = session()->get('agency_id');
         
-        // 유효성 검사
         if (empty($data['name']) || empty($data['phone_number'])) {
             return $this->fail('이름과 전화번호를 입력하세요.', 400);
         }
         
         $userModel = new \App\Models\UserModel();
         
-        // 전화번호 + 대리점 중복 체크
         if ($userModel->isDuplicatePhone($data['phone_number'], $agencyId)) {
             return $this->fail('이미 등록된 전화번호입니다.', 400);
         }
@@ -185,8 +182,8 @@ class UserController extends BaseApiController
             'phone_number' => $data['phone_number'],
             'is_franchise' => $data['is_franchise'] ?? 0,
             'registration_date' => date('Y-m-d'),
-            'expiry_date' => date('Y-m-d', strtotime('+1 month')),
-            'status' => 1
+            'expiry_date' => null, // null로 저장
+            'status' => $data['status'] ?? 1
         ];
         
         if ($userModel->insert($insertData)) {

@@ -56,7 +56,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     // 사용자 관리
     $routes->get('users', 'UserController::index');
     $routes->post('users', 'UserController::create');
-    $routes->get('users/(:num)', 'UserController::show/$1');
+    $routes->get('users/(:num)', 'UserController::detail/$1');
     $routes->put('users/(:num)', 'UserController::modify/$1');
     $routes->delete('users/(:num)', 'UserController::delete/$1');
     $routes->post('users/(:num)/extend', 'UserController::extend/$1');
@@ -82,6 +82,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->post('logs/batch', 'LogController::batch');
     $routes->get('logs/files', 'LogController::files'); // 관리자용
     $routes->get('logs/user/(:segment)', 'LogController::getUserLogs/$1');
+    
+    $routes->post('logs/file', 'LogController::saveToFile');
+    $routes->get('logs/download/(:num)/(:segment)', 'LogController::downloadUserLog/$1/$2');
 
 });
 
