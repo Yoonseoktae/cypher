@@ -57,7 +57,7 @@
         <div class="col-12 col-md-3">
             <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body p-3">
-                    <div class="text-xs fw-bold text-primary text-uppercase mb-1">전체 회원수</div>
+                    <div class="text-xs fw-bold text-primary text-uppercase mb-1">총 인원</div>
                     <div class="h5 mb-0 fw-bold" id="totalUsers">-</div>
                 </div>
             </div>
@@ -65,7 +65,7 @@
         <div class="col-12 col-md-3">
             <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body p-3">
-                    <div class="text-xs fw-bold text-success text-uppercase mb-1">신규 회원수</div>
+                    <div class="text-xs fw-bold text-success text-uppercase mb-1">신규 회원</div>
                     <div class="h5 mb-0 fw-bold" id="newUsers">-</div>
                 </div>
             </div>
@@ -73,8 +73,8 @@
         <div class="col-12 col-md-3">
             <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body p-3">
-                    <div class="text-xs fw-bold text-info text-uppercase mb-1">연장 회원수</div>
-                    <div class="h5 mb-0 fw-bold" id="extendedUsers">-</div>
+                    <div class="text-xs fw-bold text-info text-uppercase mb-1">정산 인원</div>
+                    <div class="h5 mb-0 fw-bold" id="settlementUsers">-</div>
                 </div>
             </div>
         </div>
@@ -127,7 +127,6 @@ $(document).ready(function() {
     loadAgencyList();
     initYearFilter();
     
-    // 현재 월 선택
     $('#monthFilter').val(('0' + new Date().getMonth()).slice(-2) || '12');
 });
 
@@ -170,7 +169,7 @@ function loadSettlement() {
         return;
     }
     
-    // 스냅샷 데이터 조회
+    // 정산 통계 조회
     api.get('/settlement/snapshot', {
         agency_id: agencyId,
         year: year,
@@ -182,28 +181,21 @@ function loadSettlement() {
             
             $('#totalUsers').text(data.total_users || 0);
             $('#newUsers').text(data.new_users || 0);
-            $('#extendedUsers').text(data.extended_users || 0);
+            $('#settlementUsers').text(data.settlement_users || 0);
             $('#settlementAmount').text((data.settlement_amount || 0).toLocaleString() + '원');
             
-            if (data.has_snapshot) {
+            // settlement_period 존재 여부 확인
+            if (data.settlement_period) {
                 const period = data.settlement_period;
                 $('#periodText').text(`${period.start} ~ ${period.end}`);
-                $('#snapshotDate').text(data.snapshot_date);
                 $('#settlementPeriod').show();
-                
-                // 회원 리스트 로드
-                loadUsers(agencyId, year, month);
             } else {
                 $('#settlementPeriod').hide();
-                $('#usersTable').html(`<tr><td colspan="5" class="text-center py-4">${data.message}</td></tr>`);
-                $('#downloadBtn').hide();
             }
         }
-    })
-    .fail(handleError);
-}
-
-function loadUsers(agencyId, year, month) {
+    });
+    
+    // 정산 인원 리스트 조회
     api.get('/settlement/users', {
         agency_id: agencyId,
         year: year,
@@ -216,6 +208,8 @@ function loadUsers(agencyId, year, month) {
             
             if (currentUsers.length > 0) {
                 $('#downloadBtn').show();
+            } else {
+                $('#downloadBtn').hide();
             }
         }
     })
@@ -226,7 +220,7 @@ function renderUsersTable(users) {
     let html = '';
     
     if (users.length === 0) {
-        html = '<tr><td colspan="5" class="text-center py-4">정산 대상 회원이 없습니다.</td></tr>';
+        html = '<tr><td colspan="5" class="text-center py-4">해당 정산 기간에 등록된 회원이 없습니다.</td></tr>';
     } else {
         users.forEach(function(user) {
             html += `

@@ -78,6 +78,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
 
     // 정산
     $routes->get('settlement/snapshot', 'SettlementController::getSnapshot');
+    $routes->get('settlement/stats', 'SettlementController::getStats');
     $routes->get('settlement/users', 'SettlementController::getUsers');
 
     // 로그
