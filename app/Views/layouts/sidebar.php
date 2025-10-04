@@ -48,6 +48,11 @@ $role = $session->get('role');
                     <i class="bi bi-box-arrow-right"></i> 로그아웃
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="https://firebasestorage.googleapis.com/v0/b/callproject-b0de6.firebasestorage.app/o/taxi%2Fholic_1.3.apk?alt=media&token=51808723-d9d3-4871-9525-d5490567491e">
+                    <i class="bi bi-cloud-arrow-down-fill"></i> 어플 다운로드
+                </a>
+            </li>
         </ul>
     </div>
 </nav>
