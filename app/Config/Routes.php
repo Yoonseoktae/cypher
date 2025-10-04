@@ -27,6 +27,9 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($rout
     $routes->get('notices/create', 'NoticeController::create');
     $routes->get('notices/(:num)/edit', 'NoticeController::edit/$1');
 
+    // 정산 관리
+    $routes->get('settlement', 'SettlementController::index');
+
 });
 
 // API
@@ -72,6 +75,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], function($route
     $routes->put('notices/(:num)', 'NoticeController::update/$1');
     $routes->delete('notices/(:num)', 'NoticeController::delete/$1');
     $routes->post('notices/(:num)/toggle-pin', 'NoticeController::togglePin/$1');
+
+    // 정산
+    $routes->get('settlement/snapshot', 'SettlementController::getSnapshot');
+    $routes->get('settlement/users', 'SettlementController::getUsers');
 
     // 로그
     $routes->post('logs', 'LogController::create');

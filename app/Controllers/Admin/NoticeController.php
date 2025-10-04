@@ -1,5 +1,4 @@
 <?php
-// app/Controllers/Admin/NoticeController.php
 
 namespace App\Controllers\Admin;
 
